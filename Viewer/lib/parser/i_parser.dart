@@ -3,5 +3,6 @@ import 'dart:typed_data';
 import '../map_data.dart';
 
 abstract class IParser {
-  MapData parse(Uint8List bytes);
+  MapData getMapData(Uint8List bytes);
+  Uint8List getFloorPlan(Uint8List bytes, String building, int floor);
 }

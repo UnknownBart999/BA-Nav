@@ -2,63 +2,66 @@
     "mapName": "Map1",
     "mapVersion": "1.0.0",
     "mapData": {
-        "nodeCount": 3,
-        "C1": {
-            "floor0": {
-                "abc": 32,
-                "nodes": [
+        "buildings": [
+            {
+                "name": "C1",
+                "floors": [
                     {
-                        "name": "room1",
-                        "id": 0,
-                        "x": 5,
-                        "y": 4,
-                        "category": 3
-                    },
-                    {
-                        "name": "2",
-                        "id": 1,
-                        "x": 5,
-                        "y": 4,
-                        "category": 3,
-                        "add": {
-                            "hi": "hello"
-                        }
+                        "level": 0,
+                        "nodes": [
+                            {
+                                "name": "101",
+                                "id": 0,
+                                "x": 5,
+                                "y": 4,
+                                "category": 0
+                            }, 
+                            {
+                                "name": "102",
+                                "id": 1,
+                                "x": 5,
+                                "y": 4,
+                                "category": 3,
+                                "add": {
+                                    "firedoor": true
+                                }
+                            }
+                        ],
+                        "floorplan": "base64"
                     }
                 ]
             },
-            "floor1": {
-
-            }
-        },
-        "C2": {
-            "floor0": {
-                "nodes": [{
-                    "name": "room3",
-                    "id": 2,
-                    "x": 5,
-                    "y": 4,
-                    "category": 3,
-                    "add": {
-
+            {
+                "name": "C2",
+                "floors": [
+                    {
+                        "level": 0,
+                        "nodes": [{
+                            "name": "103",
+                            "id": 2,
+                            "x": 5,
+                            "y": 4,
+                            "category": 1,
+                            "add": {}
+                        }],
+                        "floorplan": "base64_2"
                     }
-                }]
+                ]
             }
-        },
+        ],
         "edges": [
             {
                 "nodeId1": 0,
                 "nodeId2": 1,
                 "distance": 4.5,
-                "add": {
-
-                }
+                "add": {}
             },
             {
                 "nodeId1": 0,
                 "nodeId2": 2,
                 "distance": 4.5,
                 "add": {
-                    "paved": "yes"
+                    "fireExit": true
                 }
             },
             {
@@ -66,6 +69,7 @@
                 "nodeId2": 2,
                 "distance": 4.5
             }
-        ]
+        ],
+        "nodeCount": 3
     }
 }

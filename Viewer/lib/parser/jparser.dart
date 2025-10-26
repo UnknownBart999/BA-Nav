@@ -1,81 +1,235 @@
 import 'dart:convert';
 import 'dart:typed_data';
-import 'dart:io';
+import 'dart:io'; // TESTING TEMP
 
 import 'i_parser.dart';
 import '../map_data.dart';
 
-// TODO: Test every edge case
+// TODO: Test every edge case, use streams rather than Uint8List in case of large JSON files
+
+typedef JsonObject = Map<String, dynamic>;
+typedef MetaCallback = bool Function(JsonObject meta);
+typedef BuildingCallback = int Function(JsonObject building);
+typedef FloorCallback = int Function(JsonObject floor);
+typedef NodeCallback = int Function(JsonObject node);
+typedef EdgeCallback = bool Function(JsonObject edge);
 
 class JParser extends IParser {
 
   @override
-  MapData parse(Uint8List bytes) {
+  MapData getMapData(Uint8List bytes) {
+    late final MapData map;
+    late final List<Node?> nodes;
+    late String currentBuilding;
+    late int currentFloor;
+    
+    _decodeJson(bytes, (meta) {
+        nodes = List.filled(meta["mapData"]["nodeCount"], null);
+        map = MapData(meta["mapName"], meta["mapVersion"], nodes);
+        return true;
+      }, (building) {
+        currentBuilding = building["name"];
+        return 0;
+      }, (floor) {
+        try {
+          Base64Decoder().convert(floor["floorplan"]);
+        } catch (e) {
+          throw "Floorplan '${floor["floorplan"]}' is not valid Base64-encoded String!";
+        }
+        currentFloor = floor["level"];
+        return 0;
+      }, (node) {
+        // Duplicate id check
+        if (nodes[node["id"]] != null) {
+          throw "Node '$node' has non-unique id!";
+        }
+        nodes[node["id"]] = Node(node["name"], currentBuilding, node["id"], node["x"], node["y"], node["category"], currentFloor, node["add"], List.empty(growable: true));
+        return 0;
+      }, (edge) {
+        // TODO: Disallow duplicate edges
+        nodes[edge["nodeId1"]]!.neighbors.add((edge["nodeId2"], edge["distance"], edge["add"]));
+        nodes[edge["nodeId2"]]!.neighbors.add((edge["nodeId1"], edge["distance"], edge["add"]));
+        return true;
+      });
+
+    return map;
+  }
+
+  @override
+  Uint8List getFloorPlan(Uint8List bytes, String building, int floor) {
+    late String currentBuilding;
+    late final Uint8List imgBytes;
+
+    _decodeJson(bytes,
+      null,
+      (building) {
+        currentBuilding = building["name"];
+        return -1;
+      },
+      (floor) {
+        if (currentBuilding == building && floor["level"] == floor) {
+          imgBytes = Base64Decoder().convert(floor["floorplan"]);
+          return 1;
+        }
+        return -1;
+      },
+      null,
+      null
+    );
+
+    return imgBytes;
+  }
+
+  /// Parses JSON bytes, checks correctness of format and data. Inserts callbacks at every step of the reading process.
+  /// Inserting callbacks allows for the reusable parsing/validation code to run alongside any custom data fetching code.
+  /// This allows for parsing/validation and data fetching to all happen within a single iterations, rather than two seperate iterations.
+  ///
+  /// Parameters:
+  /// - [bytes] UTF-8 encoded JSON bytes
+  /// - [metaFunc] Callback for metadata processing
+  /// - [buildFunc] Callback for building processing
+  /// - [floorFunc] Callback for floor processing
+  /// - [nodeFunc] Callback for node processing
+  /// - [edgeFunc] Callback for edge processing
+  ///   * -1 to break building loop
+  ///   *  0 to continue
+  ///   *  1 to return immediately
+  ///   *  true to continue
+  ///   *  false to return
+  // TODO: Disallow duplicate building names, disallow duplicate floors within the same building
+  void _decodeJson(Uint8List bytes, MetaCallback? metaFunc, BuildingCallback? buildFunc, FloorCallback? floorFunc, NodeCallback? nodeFunc, EdgeCallback? edgeFunc) {
     // JSON bytes are encoded in UTF-8
     String decodedString = Utf8Decoder().convert(bytes);
     var json = JsonDecoder().convert(decodedString);
-    MapData map;
 
-    // Any incorrect data type (bad member access) or null violations (when creating Node) are caught
-    // and indicate that either the data format is incorrect, or there is missing data
     try {
-      List<Node?> nodes = List.filled(json["mapData"]["nodeCount"], null);
+      _validateMeta(json);
+      JsonObject mapData = json["mapData"];
+      if (metaFunc != null && !metaFunc(json)) {
+        return;
+      }
 
-      for (var building in json["mapData"].entries) {
-        // Skips over nodeCount. If not, building.value.entries fails
-        // Skips over edges, they will be observed later
-        if (building.key == "nodeCount" || building.key == "edges") {
-          continue;
-        }
-
-        for (var floor in building.value.entries) {
-          // Skips over floors without nodes. This allows floors without nodes (TBD)
-          if (floor.value["nodes"] == null) {
-            continue;
+      // Buildings loop
+      for (var building in mapData["buildings"]) {
+        _validateBuilding(building);
+        if (buildFunc != null) {
+          int result = buildFunc(building);
+          if (result < 0) {
+            break;
+          } else if (result > 0) {
+            return;
           }
-
-          for (var node in floor.value["nodes"]) {
-            // Fails if there are duplicate node IDs
-            if (node[node["id"]] != null) {
-              throw "Two nodes of the same ID! (${node["id"]})";
+        }
+        for (var floor in building["floors"]) {
+          _validateFloor(floor);
+          if (floorFunc != null) {
+            int result = floorFunc(floor);
+            if (result < 0) {
+              break;
+            } else if (result > 0) {
+              return;
             }
-
-            // If add is empty, store it as null rather than an empty map (less memory)
-            if (node["add"] != null && node["add"].isEmpty) {
-              node["add"] = null;
+          }
+          for (var node in floor["nodes"]) {
+            _validateNode(node, mapData["nodeCount"]);
+            if (nodeFunc != null) {
+              int result = nodeFunc(node);
+              if (result < 0) {
+                break;
+              } else if (result > 0) {
+                return;
+              }
             }
-            nodes[node["id"]] = Node(node["name"], building.key, node["id"], node["x"], node["y"], node["category"], 0, node["add"], List.empty(growable: true));
           }
         }
       }
 
-      // TODO: Disallow duplicate edges
-      for (var edge in json["mapData"]["edges"]) {
-        int nodeId1 = edge["nodeId1"];
-        int nodeId2 = edge["nodeId2"];
-        // If add is empty, store it as null rather than an empty map (less memory)
-        if (edge["add"] != null && edge["add"].isEmpty) {
-          edge["add"] = null;
+      // Edges loop
+      for (var edge in mapData["edges"]) {
+        _validateEdge(edge);
+        if (edgeFunc != null && !edgeFunc(edge)) {
+          return;
         }
-        nodes[nodeId1]!.neighbors.add((nodeId2, edge["distance"], edge["add"]));
-        nodes[nodeId2]!.neighbors.add((nodeId1, edge["distance"], edge["add"]));
       }
-
-      map = MapData(json["mapName"], json["mapVersion"], nodes.cast<Node>());
-
-    } catch (e) {
-      // TODO: Make the exception more specific for easier error detection???
-      throw "Invalid format and/or missing data!";
+      
+    } on String catch (e) {
+      throw FormatException(e);
     }
+  }
 
-    return map;
+  void _validateMeta(var root) {
+    // Metadata check
+    if (root is! JsonObject || root["mapName"] is! String || root["mapVersion"] is! String || root["mapData"] is! JsonObject) {
+      throw "File is missing metadata and/or metadata has incorrent types!";
+    }
+    // mapData check
+    if (root["mapData"]["buildings"] is! List<dynamic> || root["mapData"]["edges"] is! List<dynamic> || root["mapData"]["nodeCount"] is! int) {
+      throw "mapData is missing attributes and/or attributes have incorrect data types!";
+    }
+  }
+
+  void _validateBuilding(var building) {
+    // Building type check
+    if (building is! JsonObject) {
+      throw "Building '$building' must be an object!";
+    }
+    // Attribute check
+    if (building["name"] is! String || building["floors"] is! List<dynamic>) {
+      throw "Building '$building' is missing attributes and/or attributes have incorrect data types!";
+    }
+  }
+
+  void _validateFloor(var floor) {
+    // Floor type check
+    if (floor is! JsonObject) {
+      throw "Floor '$floor' must be an object!";
+    }
+    // Attribute check
+    if (floor["level"] is! int || floor["nodes"] is! List<dynamic> || floor["floorplan"] is! String) {
+      throw "Floor '$floor' is missing attributes and/or attributes have incorrect data types!";
+    }
+  }
+
+  void _validateNode(var node, int nodeCount) {
+    // Node type check
+    if (node is! JsonObject) {
+      throw "Node '$node' must be an object!";
+    }
+    // Attribute check
+    if (node["name"] is! String || node["id"] is! int || node["x"] is! int || node["y"] is! int || node["category"] is! int) {
+      throw "Node '$node' is missing attributes and/or attributes have incorrect data types!";
+    }
+    // Check if id is larger than nodeCount
+    if (node["id"] >= nodeCount) {
+      throw "Node ID '${node["id"]}' is larger that nodeCount '$nodeCount'";
+    }
+    // Set add to null if it's empty (less memory) or not a dictionary
+    if (node["add"] is! JsonObject || node["add"].isEmpty) {
+      node["add"] = null;
+    }
+  }
+
+  void _validateEdge(var edge) {
+    // Edge type check
+    if (edge is! JsonObject) {
+      throw "Edge '$edge' must be an object!";
+    }
+    // Attribute check
+    if (edge["nodeId1"] is! int || edge["nodeId2"] is! int || edge["distance"] is! double) {
+      throw "Edge '$edge' is missing attributes and/or attributes have incorrect data types!";
+    }
+    // Set add to null if it's empty (less memory) or not a dictionary
+    if (edge["add"] is! JsonObject || edge["add"].isEmpty) {
+      edge["add"] = null;
+    }
   }
   
 }
 
+// TESTING CODE
 Future<void> main() async {
   JParser parser = JParser();
   File file = File('test.json');
-  MapData m = parser.parse(await file.readAsBytes());
+  MapData m = parser.getMapData(await file.readAsBytes());
   print(m.nodes);
 }
