@@ -56,19 +56,22 @@ class JParser extends IParser {
   }
 
   @override
-  Uint8List getFloorPlan(Uint8List bytes, String building, int floor) {
+  Uint8List? getFloorPlan(Uint8List bytes, String building, int floor) {
     late String currentBuilding;
-    late final Uint8List imgBytes;
+    Uint8List? imgBytes;
 
     _decodeJson(bytes,
       null,
-      (building) {
-        currentBuilding = building["name"];
+      (build) {
+        if (build["name"] == building) {
+          currentBuilding = build["name"];
+          return 0;
+        }
         return -1;
       },
-      (floor) {
-        if (currentBuilding == building && floor["level"] == floor) {
-          imgBytes = Base64Decoder().convert(floor["floorplan"]);
+      (flo) {
+        if (currentBuilding == building && flo["level"] == floor) {
+          imgBytes = Base64Decoder().convert(flo["floorplan"]);
           return 1;
         }
         return -1;
@@ -91,9 +94,9 @@ class JParser extends IParser {
   /// - [floorFunc] Callback for floor processing
   /// - [nodeFunc] Callback for node processing
   /// - [edgeFunc] Callback for edge processing
-  ///   * -1 to break building loop
-  ///   *  0 to continue
-  ///   *  1 to return immediately
+  ///   * -1 to continue loop
+  ///   *  0 to do nothing
+  ///   *  1 to return
   ///   *  true to continue
   ///   *  false to return
   // TODO: Disallow duplicate building names, disallow duplicate floors within the same building
@@ -115,7 +118,7 @@ class JParser extends IParser {
         if (buildFunc != null) {
           int result = buildFunc(building);
           if (result < 0) {
-            break;
+            continue;
           } else if (result > 0) {
             return;
           }
@@ -125,7 +128,7 @@ class JParser extends IParser {
           if (floorFunc != null) {
             int result = floorFunc(floor);
             if (result < 0) {
-              break;
+              continue;
             } else if (result > 0) {
               return;
             }
@@ -135,7 +138,7 @@ class JParser extends IParser {
             if (nodeFunc != null) {
               int result = nodeFunc(node);
               if (result < 0) {
-                break;
+                continue;
               } else if (result > 0) {
                 return;
               }
@@ -230,6 +233,6 @@ class JParser extends IParser {
 Future<void> main() async {
   JParser parser = JParser();
   File file = File('test.json');
-  MapData m = parser.getMapData(await file.readAsBytes());
-  print(m.nodes);
+  Uint8List? m = parser.getFloorPlan(await file.readAsBytes(), "C1", 0);
+  print(m);
 }
