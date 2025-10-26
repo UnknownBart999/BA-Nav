@@ -7,8 +7,8 @@ import 'dart:typed_data';
 class MapData {
   final String mapName;
   final String version;
-  final List<Node> nodes;
-  // TODO: Figure out floorplan datatype
+  final List<Node?> nodes;
+  late Uint8List currentFloorplan;
 
   MapData(this.mapName, this.version, this.nodes);
 
@@ -24,7 +24,7 @@ class Node {
   final Map<String, dynamic>? add;
   final List<(int, double, Map<String, dynamic>?)> neighbors;
   
-  // 0-3 ID, 4-5 x, 6-7 y, 8 - category, 9 - floor
+  // 0-3 - ID, 4-5 - x, 6-7 - y, 8 - category, 9 - floor
   final ByteData _data = ByteData(10);
 
   Node(this.name, this.buildingName, int id, int x, int y, int category, int floor, this.add, this.neighbors) {
