@@ -3,7 +3,7 @@ import 'i_map_data.dart';
 // MapData class that implements IMapData interface
 class MapData extends IMapData {
   final String _mapName, _mapVersion;
-  final Map<String, Building> _buildings;
+  final Map<String, IBuilding> _buildings;
   final List<INode> _nodes;
   final List<IEdge> _edges;
 
