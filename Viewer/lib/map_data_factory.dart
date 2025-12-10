@@ -2,7 +2,6 @@ import 'package:ba_nav/i_map_data.dart';
 import 'package:ba_nav/map_data.dart';
 
 /// Contains factory methods for the map data classes
-// TODO : Make add nullable here and in the mapdata interfaces
 class MapDataFactory {
 
   static IMapData createMapData(String mapName, String mapVersion, Map<String, IBuilding> buildings, List<INode> nodes, List<IEdge> edges) {

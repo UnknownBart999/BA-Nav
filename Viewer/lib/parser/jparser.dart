@@ -16,21 +16,21 @@ class JParser extends IParser {
 
     JsonEvent? prev;
     final vb = <JPContext, dynamic> {}; // value buffer
-    final checkSum = <JPContext, int> {};
+    final elementCount = <JPContext, int> {};
     final contextStack = <JPContext> [];
 
     await for (final curr in stream) {
       final context = contextStack.lastOrNull;
 
-      // Save data to vb, increment checksum, throw if data is incorrect
+      // Save data to vb, increment elementCount, throw if data is incorrect
       if (curr.type == JsonEventType.propertyValue && prev != null && prev.type == JsonEventType.propertyName) {
         if (!JPContext.checkAttribute(context!, prev.value, curr.value)) {
           throw "Attribute ${prev.value} (value: ${curr.value}) doesn't belong to $context!";
         }
         vb[context][prev.value] = curr.value;
-        // id is optional, so don't increment checksum
+        // id is optional, so don't increment elementCount
         if (prev.value != "id") {
-          checkSum[context] = (checkSum[context] != null) ? checkSum[context]! + 1 : 1;
+          elementCount[context] = elementCount[context]! + 1;
         }
 
       } else if (curr.type == JsonEventType.arrayElement && curr.value != null) {
@@ -38,18 +38,18 @@ class JParser extends IParser {
           throw "Attribute ${curr.value} doesn't belong to $context!";
         }
         vb[context].add(curr.value);
+        elementCount[context] = elementCount[context]! + 1;
       }
 
-      // Create object from data in vb, increment checksum of parent context, throw if buildingName isn't unique
+      // Create object from data in vb, increment elementCount of parent context, throw if buildingName isn't unique
       if (curr.type == JsonEventType.endObject || curr.type == JsonEventType.endArray) {
-        final obj = JPContext.createObject(context!, vb, checkSum);
+        final obj = JPContext.createObject(context!, vb, elementCount);
         if (obj is IMapData) {
           return obj;
         }
 
         if (obj != null) {
           final prevContext = contextStack.elementAt(contextStack.length-2);
-
           if (obj is IBuilding) {
             // Checks building name uniquness
             final buildingName = vb[context]["name"];
@@ -57,31 +57,38 @@ class JParser extends IParser {
               throw "Building name $buildingName must be unique!";
             }
             vb[prevContext][buildingName] = obj;
+
           } else {
             // Inserts at specified index, it id is not null
-            vb[prevContext].add(obj);
+            final id = vb[context]["id"];
+            if (id != null) {
+              if (id >= vb[prevContext].length) {
+                vb[prevContext].length = id + 1;
+              }
+              vb[prevContext][id] = obj;
+            } else {
+              vb[prevContext].add(obj);
+            }
           }
         }
-
-        // add is optional, so don't increment checksum of parent context
+        // add is optional, so don't increment elementCount of parent context
         if (context != JPContext.addedge || context != JPContext.addnode) {
           final prevContext = contextStack.elementAt(contextStack.length-2);
-          checkSum[prevContext] = checkSum[prevContext]! + 1;
+          elementCount[prevContext] = elementCount[prevContext]! + 1;
         }
       }
 
-      // Switch context, initialise buffer/checksum for new context
+      // Switch context, initialise buffer/elementCount for new context
       if (curr.type == JsonEventType.beginObject || curr.type == JsonEventType.beginArray || curr.type == JsonEventType.endObject || curr.type == JsonEventType.endArray) {
-        _switchContext(contextStack, prev?.value, curr.type, vb, checkSum);
+        _switchContext(contextStack, prev?.value, curr.type, vb, elementCount);
       }
 
       prev = curr;
     }
-
     return null;
   }
 
-  void _switchContext(List<JPContext> stack, dynamic prevValue, JsonEventType currType, Map<JPContext, dynamic> vb, Map<JPContext, int> checkSum) {
+  void _switchContext(List<JPContext> stack, dynamic prevValue, JsonEventType currType, Map<JPContext, dynamic> vb, Map<JPContext, int> elementCount) {
     final context = stack.lastOrNull;
     if (currType == JsonEventType.beginObject || currType == JsonEventType.beginArray) {
       // Ternary converts non-string labels to null, since non-string means no label is present
@@ -98,7 +105,7 @@ class JParser extends IParser {
       } else if (nextContext.openingSymbol == JsonEventType.beginArray) {
         vb[nextContext] = [];
       }
-      checkSum[nextContext] = 0;
+      elementCount[nextContext] = 0;
 
     } else {
       stack.removeLast();
@@ -113,6 +120,6 @@ void main() {
   var parser = JParser();
   var mapdata = parser.getMapData(json);
   mapdata.then((value) => 
-    print(value!.getBuildings()["C2"]!.getFloors())
+    print(value!.getBuildings()["C1"]!.getFloors())
   );
 }

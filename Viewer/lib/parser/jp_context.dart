@@ -22,8 +22,8 @@ enum JPContext {
   final String? openingLabel;
   final JPContext? parentContext;
   final JsonEventType openingSymbol;
-  final int? checkSum;
-  const JPContext(this.openingLabel, this.parentContext, this.openingSymbol, this.checkSum);
+  final int? numOfElements;
+  const JPContext(this.openingLabel, this.parentContext, this.openingSymbol, this.numOfElements);
 
   /// Used for easy lookup of the next context. Returns null of there exists no valid context, given the parameters
   static JPContext? getNextContext(String? openingLabel, JPContext? parentContext, JsonEventType openingSymbol) {
@@ -52,8 +52,13 @@ enum JPContext {
     final vbc = vb[context];
     Object obj;
 
-    if (context.checkSum != null && checkSum[context] != context.checkSum) {
+    // Check if all required attributes exist
+    if (context.numOfElements != null && checkSum[context] != context.numOfElements) {
       throw "Object $context is missing attributes (only has ${checkSum[context]})!";
+    }
+    // Check if any of the object lists contain null (ids are not sequential)
+    else if (context.numOfElements == null && checkSum[context] != vbc.length) {
+      throw "IDs in $context must be sequential!";
     }
 
     switch (context) {

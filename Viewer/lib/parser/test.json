@@ -17,6 +17,13 @@
                 "name": "C1",
                 "floors": [
                     {
+                        "id": 1,
+                        "level": 0,
+                        "floorPlan": "abcde",
+                        "nids": [1, 2, 3]
+                    },
+                    {
+                        "id": 0,
                         "level": 0,
                         "floorPlan": "abcde",
                         "nids": [1, 2, 3]
