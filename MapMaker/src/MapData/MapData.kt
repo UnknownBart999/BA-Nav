@@ -16,7 +16,8 @@ class MapData(
     override var name: String = "", override var version: String = "",
     override val buildings: ArrayList<Building> = ArrayList(),
     override val externalNodes: ArrayList<Node> = ArrayList(),
-    override val externalEdges: ArrayList<Edge> = ArrayList()
+    override val externalEdges: ArrayList<Edge> = ArrayList(),
+    override var categories: ArrayList<String> = ArrayList()
 ) : IMapData {
     /**
      * Creates a new Building with name [name] and adds it to Maps's building list.
@@ -234,11 +235,13 @@ class MapData(
     override fun getNodes(): ArrayList<Node> {
         val nodesList = ArrayList<Node>()
 
-        for (building in buildings) {
+        for (building in this.buildings) {
             for (floor in building.floors) {
                 nodesList.addAll(floor.nodes)
             }
         }
+
+        nodesList.addAll(this.externalNodes)
 
         return nodesList
     }
@@ -249,14 +252,46 @@ class MapData(
     override fun getEdges(): ArrayList<Edge> {
         val edgesList = ArrayList<Edge>()
 
-        for (building in buildings) {
+        for (building in this.buildings) {
             for (floor in building.floors) {
                 edgesList.addAll(floor.edges)
             }
         }
 
+        edgesList.addAll(this.externalEdges)
+
         return edgesList
     }
+
+//    /**
+//     * Creates a new external node in this map using [name], [x], [y], and [cat].
+//     * [x] and [y] are the x-y coordinates that the node has.
+//     * [cat] is the category number for this node. This is useful to differentiate between entrances, exits, rooms, elevators, etc.
+//     *
+//     * @return Reference to the newly created Node.
+//     */
+//    override fun addNode(name: String, x: Int, y: Int, cat: Int): Node {
+//        val node = Node(name = name, coords = Pair(x, y), cat = cat)
+//        this.externalNodes.add(node)
+//        return node
+//    }
+//
+//    /**
+//     * Attempts to delete the node from the external map using [name].
+//     *
+//     * @return true or false on whether the node was removed successfully.
+//     */
+//    override fun delNode(name: String): Boolean {
+//
+//        for (node in this.externalNodes) {
+//            if (node.name == name) {
+//                this.externalNodes.remove(node)
+//                return true
+//            }
+//        }
+//        return false
+//
+//    }
 }
 
 /**
@@ -494,7 +529,7 @@ class Node(
     override var name: String = "", override val building: Building,
     override val floor: Floor, override var coords: Pair<Int, Int> = Pair(0, 0),
     override var cat: Int = 0, override val edges: ArrayList<Edge> = ArrayList(),
-    override val additionalInfo: ArrayList<String>? = null
+    override val additionalInfo: Map<String, Any>? = null
 ) : INode {
 
     companion object {
@@ -562,7 +597,7 @@ class Node(
 
 class Edge(
     override val nodes: Pair<Node, Node>,
-    override var dist: Float = 0F, override var additionalInfo: ArrayList<String>? = null
+    override var dist: Float = 0F, override var additionalInfo: Map<String, Any>? = null
 ) : IEdge {
 
     companion object {

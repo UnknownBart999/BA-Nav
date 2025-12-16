@@ -16,6 +16,7 @@ internal interface IMapData {
     val buildings: ArrayList<Building>
     val externalNodes: ArrayList<Node>
     val externalEdges: ArrayList<Edge>
+    var categories: ArrayList<String>
 
     /**
      * Creates a new Building with name [name] and adds it to Maps's building list.
@@ -177,7 +178,7 @@ internal interface IFloor {
  * @property coords X-Y coordinate data for the node.
  * @property cat Category id for the node.
  * @property edges ArrayList of edges that use this node.
- * @property additionalInfo Nullable ArrayList of strings to store future modifications to the node.
+ * @property additionalInfo Map of strings to values to store future modifications to the node.
  */
 internal interface INode {
 
@@ -188,7 +189,7 @@ internal interface INode {
     var coords: Pair<Int, Int>
     var cat: Int
     val edges: ArrayList<Edge>
-    val additionalInfo: ArrayList<String>?
+    val additionalInfo: Map<String, Any>?
 
     /**
      * Updates the nodes coordinates with [x] and [y].
@@ -227,14 +228,14 @@ internal interface INode {
  * @property id Nonmutable id that is automatically generated upon creating the edge.
  * @property nodes Pair of Node for this edge.
  * @property dist Distance between the two Nodes.
- * @property additionalInfo Nullable ArrayList of strings to store future modifications to the edge.
+ * @property additionalInfo Map of strings to values to store future modifications to the edge.
  */
 internal interface IEdge {
 
     val id: Int
     val nodes: Pair<Node, Node>
     var dist: Float
-    val additionalInfo: ArrayList<String>?
+    val additionalInfo: Map<String, Any>?
 
     /**
      * Calculates the distance between the two nodes.

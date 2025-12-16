@@ -1,25 +1,27 @@
+import 'map_data.dart';
+
 abstract class IMapData {
   const IMapData(
     String mapName,
     String mapVersion,
     Map<String, IBuilding> buildings,
-    List<INode> nodes,
-    List<IEdge> edges,
+    List<Node> nodes,
+    List<Edge> edges,
   );
 
   String getMapName();
   String getMapVersion();
-  Map<String, IBuilding> getBuildings();
-  List<INode> getNodes();
-  List<IEdge> getEdges();
+  Map<String, Building> getBuildings();
+  List<Node> getNodes();
+  List<Edge> getEdges();
 }
 
 abstract class IBuilding {
-  const IBuilding(List<IFloor> floors);
+  const IBuilding(List<Floor> floors);
 
-  List<IFloor> getFloors();
-  Map<String, int> getNodeIds(List<INode> nodes);
-  Map<String, int> getNodesIdsByCategory(List<INode> nodes, int cat);
+  List<Floor> getFloors();
+  List<(int, String, int)> getNodeIds(List<Node> nodes);
+  List<(int, String, int)> getNodesIdsByCategory(List<Node> nodes, int cat);
 }
 
 abstract class IFloor {

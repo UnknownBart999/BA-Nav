@@ -4,8 +4,8 @@ import 'i_map_data.dart';
 class MapData extends IMapData {
   final String _mapName, _mapVersion;
   final Map<String, Building> _buildings;
-  final List<INode> _nodes;
-  final List<IEdge> _edges;
+  final List<Node> _nodes;
+  final List<Edge> _edges;
 
   @override
   const MapData(
@@ -32,58 +32,54 @@ class MapData extends IMapData {
   }
 
   @override
-  List<INode> getNodes() {
+  List<Node> getNodes() {
     return List.unmodifiable(_nodes);
   }
 
   @override
-  List<IEdge> getEdges() {
+  List<Edge> getEdges() {
     return List.unmodifiable(_edges);
   }
 }
 
 // Building class that implements IBuilding interface
 class Building extends IBuilding {
-  final List<IFloor> _floors;
+  final List<Floor> _floors;
 
   @override
   Building(this._floors) : super(_floors);
 
   @override
-  List<IFloor> getFloors() {
+  List<Floor> getFloors() {
     return List.unmodifiable(_floors);
   }
 
   @override
-  Map<String, int> getNodeIds(List<INode> nodes) {
+  List<(int, String, int)> getNodeIds(List<Node> nodes) {
     return getNodesIdsByCategory(nodes, null);
   }
 
   @override
-  Map<String, int> getNodesIdsByCategory(List<INode> nodes, int? cat) {
-    Map<String, int> mappedNids = {};
+  List<(int, String, int)> getNodesIdsByCategory(List<Node> nodes, int? cat) {
+    List<(int, String, int)> mappedNids = [];
     List<int> nids = [];
 
     // Get all node ids in each floor, combine to list.
-    for (IFloor floor in _floors) {
+    for (Floor floor in _floors) {
       nids.addAll(floor.getNodeIds());
     }
 
     // Go through each node id, get the name for that node, add to map
     for (int nid in nids) {
-      INode node = nodes.elementAt(nid);
+      Node node = nodes.elementAt(nid);
 
-      if (cat == null) {
-        mappedNids[node.getName()] = nid;
-      } else {
-        if (node.getCategory() == cat) {
-          mappedNids[node.getName()] = nid;
-        }
+      if (cat == null || node.getCategory() == cat) {
+        mappedNids.add((node.getFloorId(), node.getName(), node.getCategory()));
       }
     }
 
     nids.clear();
-    return Map.unmodifiable(mappedNids);
+    return List.unmodifiable(mappedNids);
   }
 }
 

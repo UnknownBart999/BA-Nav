@@ -2,6 +2,9 @@
   <dictionary name="project">
     <words>
       <w>coords</w>
+      <w>dfloors</w>
+      <w>eids</w>
+      <w>nids</w>
       <w>wolek</w>
     </words>
   </dictionary>
