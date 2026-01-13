@@ -5,21 +5,21 @@ abstract class IMapData {
     String mapName,
     String mapVersion,
     Map<String, IBuilding> buildings,
-    List<Node> nodes,
-    List<Edge> edges,
+    List<INode> nodes,
+    List<IEdge> edges,
   );
 
   String getMapName();
   String getMapVersion();
-  Map<String, Building> getBuildings();
-  List<Node> getNodes();
-  List<Edge> getEdges();
+  Map<String, IBuilding> getBuildings();
+  List<INode> getNodes();
+  List<IEdge> getEdges();
 }
 
 abstract class IBuilding {
   const IBuilding(List<Floor> floors);
 
-  List<Floor> getFloors();
+  List<IFloor> getFloors();
   List<(int, String, int)> getNodeIds(List<Node> nodes);
   List<(int, String, int)> getNodesIdsByCategory(List<Node> nodes, int cat);
 }

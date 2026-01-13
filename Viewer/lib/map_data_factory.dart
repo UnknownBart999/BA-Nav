@@ -5,11 +5,11 @@ import 'package:ba_nav/map_data.dart';
 class MapDataFactory {
 
   static IMapData createMapData(String mapName, String mapVersion, Map<String, IBuilding> buildings, List<INode> nodes, List<IEdge> edges) {
-    return MapData(mapName, mapVersion, buildings, nodes, edges);
+    return MapData(mapName, mapVersion, buildings.cast(), nodes.cast(), edges.cast());
   }
 
   static IBuilding createBuilding(List<IFloor> floors) {
-    return Building(floors);
+    return Building(floors.cast());
   }
 
   static IFloor createFloor(int level, List<int> nids) {
