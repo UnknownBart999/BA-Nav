@@ -1,0 +1,41 @@
+{
+    "mapName": "test",
+    "mapVersion": "hi",
+    "mapData": {
+        "buildings": [
+            {
+                "name": "C2",
+                "floors": [
+                    {
+                        "level": 3,
+                        "floorPlan": "abcd",
+                        "nids": [4, 5, 6, 7]
+                    }
+                ]
+            },
+            {
+                "name": "C1",
+                "floors": [
+                    {
+                        "id": 1,
+                        "level": 0,
+                        "floorPlan": "abcde",
+                        "nids": [1, 2, 3]
+                    },
+                    {
+                        "id": 0,
+                        "level": 0,
+                        "floorPlan": "abcde",
+                        "nids": [1, 2, 3]
+                    }
+                ]
+            }
+        ],
+        "nodes": [
+
+        ],
+        "edges": [
+
+        ]
+    }
+}
