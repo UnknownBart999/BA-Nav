@@ -108,7 +108,7 @@ internal interface IBuilding {
  */
 internal interface IFloor {
 
-    val id: Int
+    var id: Int
     var level: Int
     var floorPlan: String
     val nodes: ArrayList<Node>
@@ -161,8 +161,9 @@ internal interface IFloor {
 
     /**
      * Uploads a new floor plan and converts it to a String.
+     * @param path File path to the floor plan image (PNG, JPG, or JPEG).
      */
-    fun uploadFloorPlan()
+    fun uploadFloorPlan(path: String)
 
 }
 
@@ -182,10 +183,10 @@ internal interface IFloor {
  */
 internal interface INode {
 
-    val id: Int
+    var id: Int
     var name: String
-    val building: Building
-    val floor: Floor
+    val building: Building?
+    val floor: Floor?
     var coords: Pair<Int, Int>
     var cat: Int
     val edges: ArrayList<Edge>
@@ -232,7 +233,7 @@ internal interface INode {
  */
 internal interface IEdge {
 
-    val id: Int
+    var id: Int
     val nodes: Pair<Node, Node>
     var dist: Float
     val additionalInfo: Map<String, Any>?

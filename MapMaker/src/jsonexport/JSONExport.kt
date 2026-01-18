@@ -1,28 +1,22 @@
 package mapmaker.jsonexport
 import mapmaker.mapdata.*
-import kotlinx.serialization.*
-import kotlinx.serialization.json.*
+import tools.jackson.module.kotlin.jacksonObjectMapper
+import java.io.File
 
-@Serializable
 class JSONExport {
 
-    val mapName: String
-    val mapVersion: String
-    val buildings: ArrayList<DBuilding>
-    val nodes: ArrayList<DNode>
-    val edges: ArrayList<DEdge>
-    val categories: ArrayList<DCat>
+    val exportData: DMapExport
 
     constructor(map: MapData) {
-        this.mapName = map.name
-        this.mapVersion = map.version
+        val mapName = map.name
+        val mapVersion = map.version
 
-        this.categories = ArrayList<DCat>()
+        val categories = ArrayList<DCat>()
         for (cat in map.categories) {
-            this.categories.add(DCat(cat))
+            categories.add(DCat(cat))
         }
 
-        this.nodes = ArrayList<DNode>()
+        val nodes = ArrayList<DNode>()
         for (node in map.getNodes()) {
 
             val eids = ArrayList<Int>()
@@ -31,15 +25,15 @@ class JSONExport {
                 eids.add(edge.id)
             }
 
-            this.nodes.add(DNode(node.id, node.name, node.building.name, node.floor.id, node.coords.first, node.coords.second, node.cat, eids, node.additionalInfo))
+            nodes.add(DNode(node.id, node.name, node.building?.name ?: "Outside", node.floor?.id ?: 0, node.coords.first, node.coords.second, node.cat, eids, node.additionalInfo))
         }
 
-        this.edges = ArrayList<DEdge>()
+        val edges = ArrayList<DEdge>()
         for (edge in map.getEdges()) {
-            this.edges.add(DEdge(edge.id, edge.nodes.first.id, edge.nodes.second.id, edge.dist, edge.additionalInfo))
+            edges.add(DEdge(edge.id, edge.nodes.first.id, edge.nodes.second.id, edge.dist, edge.additionalInfo))
         }
 
-        this.buildings = ArrayList<DBuilding>()
+        val buildings = ArrayList<DBuilding>()
         for (building in map.buildings) {
             val dfloors = ArrayList<DFloor>()
             for (floor in building.floors) {
@@ -54,6 +48,23 @@ class JSONExport {
 
             buildings.add(DBuilding(building.name, dfloors))
         }
+
+        val mapData = DMapData(buildings, nodes, edges, categories)
+        this.exportData = DMapExport(mapName, mapVersion, mapData)
+
+    }
+
+    fun export() {
+
+        val objectMapper = jacksonObjectMapper()
+        objectMapper.writeValue(File(this.exportData.mapName+"_"+this.exportData.mapVersion+".json"), this.exportData)
+
+    }
+
+    fun exportToPath(filePath: String) {
+
+        val objectMapper = jacksonObjectMapper()
+        objectMapper.writeValue(File(filePath), this.exportData)
 
     }
 
