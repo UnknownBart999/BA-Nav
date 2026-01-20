@@ -840,7 +840,7 @@ class Floor(
             }
         }
 
-        val edge = Edge(nodes = Pair(node1 as Node, node2 as Node))
+        val edge = Edge(nodes = Pair(node1 as Node, node2 as Node), dist = 1f)
         this.edges.add(edge)
 
         node1.addEdge(edge)
@@ -881,7 +881,7 @@ class Floor(
             throw Exception("Internal node does not exists in this floor's nodes array.")
         }
 
-        val edge = Edge(nodes = Pair(intNode, extNode))
+        val edge = Edge(nodes = Pair(intNode, extNode), dist = 1f)
         this.edges.add(edge)
 
         intNode.addEdge(edge)
@@ -1147,7 +1147,9 @@ class Edge(
     override var id: Int = getNewID()
 
     init {
-        calcDistance()
+        if (this.dist == 0F) {
+            calcDistance()
+        }
     }
 
     /**

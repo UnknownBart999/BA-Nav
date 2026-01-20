@@ -1,0 +1,46 @@
+EDGE DISTANCE ANALYSIS
+======================
+
+UNIVERSITY CAMPUS (University Campus_1.0.0.json)
+-------------------------------------------------
+
+Cross-Floor Edges (should be 1.0):
+- Edge 8: Library Stairwell F0 (fid:0) ↔ Library Stairwell F1 (fid:1), dist=1.0 ✓
+- Edge 12: Library Stairwell F1 (fid:1) ↔ Library Stairwell F2 (fid:2), dist=1.0 ✓
+- Edge 20: SC Stairwell F0 (fid:0) ↔ SC Stairwell F1 (fid:1), dist=1.0 ✓
+- Edge 28: Science Stairwell F0 (fid:0) ↔ Science Stairwell F1 (fid:1), dist=1.0 ✓
+- Edge 32: Science Stairwell F1 (fid:1) ↔ Science Stairwell F2 (fid:2), dist=1.0 ✓
+- Edge 36: Science Stairwell F2 (fid:2) ↔ Science Stairwell F3 (fid:3), dist=1.0 ✓
+
+External Edges (building ↔ Outside, should be 1.0):
+- Edge 7: Library Entrance (Library, fid:0) ↔ Quad Center (Outside, fid:0), dist=1.0 ✓
+- Edge 19: Walkway to Library (Student Center, fid:0) ↔ Library to Student Center (Library, fid:0), dist=1.0 ✓
+  Note: This is actually building-to-building, both nodes are internal to buildings
+- Edge 27: Science Entrance (Science Building, fid:0) ↔ Parking Lot B (Outside, fid:0), dist=1.0 ✓
+
+METRO SHOPPING MALL (Metro Shopping Mall_3.0.2.json)
+----------------------------------------------------
+
+Cross-Floor Edges (should be 1.0):
+- Edge 14: Central Escalator F1 (Main Mall, fid:0) ↔ Central Escalator F2 (Main Mall, fid:1), dist=1.0 ✓
+- Edge 23: Central Escalator F2 (Main Mall, fid:1) ↔ Central Escalator F3 (Main Mall, fid:2), dist=1.0 ✓
+- Edge 37: Food Court Escalator F1 (Food Court Wing, fid:0) ↔ Food Court Escalator F2 (Food Court Wing, fid:1), dist=1.0 ✓
+- Edge 46: Entertainment Escalator F1 (Entertainment Wing, fid:0) ↔ Entertainment Escalator F2 (Entertainment Wing, fid:1), dist=1.0 ✓
+- Edge 49: Entertainment Escalator F2 (Entertainment Wing, fid:1) ↔ Entertainment Escalator F3 (Entertainment Wing, fid:2), dist=1.0 ✓
+
+External Edges (building ↔ Outside, should be 1.0):
+- Edge 13: Main Entrance (Main Mall, fid:0) ↔ Main Plaza (Outside, fid:0), dist=1.0 ✓
+- Edge 36: Patio Exit (Food Court Wing, fid:0) ↔ Food Court Patio (Outside, fid:0), dist=1.0 ✓
+- Edge 45: Entertainment Entrance (Entertainment Wing, fid:0) ↔ East Parking (Outside, fid:0), dist=1.0 ✓
+
+Building-to-Building Connectors (should be 1.0):
+- Edge 35: From Main Mall F1 (Food Court Wing, fid:0) ↔ To Food Court F1 (Main Mall, fid:0), dist=1.0 ✓
+- Edge 41: From Main Mall F2 (Food Court Wing, fid:1) ↔ To Food Court F2 (Main Mall, fid:1), dist=1.0 ✓
+- Edge 53: From Main Mall F3 (Entertainment Wing, fid:2) ↔ To Entertainment Wing F3 (Main Mall, fid:2), dist=1.0 ✓
+
+SUMMARY FOR ANALYZED FILES:
+✓ All cross-floor edges have dist=1.0
+✓ All external edges have dist=1.0
+✓ All building-to-building connector edges have dist=1.0
+
+Regular edges (same floor) correctly have calculated Euclidean distances.
