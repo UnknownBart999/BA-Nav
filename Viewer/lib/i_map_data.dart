@@ -59,3 +59,9 @@ abstract class IEdge {
   double getDistance();
   Map<String, dynamic> getAdditional();
 }
+
+abstract class ICategory {
+  const ICategory(String name);
+
+  String getName();
+}

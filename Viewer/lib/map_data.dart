@@ -182,3 +182,15 @@ class Edge extends IEdge {
     return Map.unmodifiable(_add);
   }
 }
+
+class Category extends ICategory {
+  final String _name;
+
+  @override
+  Category(this._name) : super(_name);
+
+  @override
+  String getName() {
+    return _name;
+  }
+}
