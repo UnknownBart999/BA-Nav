@@ -6,6 +6,7 @@ class MapData extends IMapData {
   final Map<String, Building> _buildings;
   final List<Node> _nodes;
   final List<Edge> _edges;
+  final List<Category> _categories;
 
   @override
   const MapData(
@@ -14,7 +15,8 @@ class MapData extends IMapData {
     this._buildings,
     this._nodes,
     this._edges,
-  ) : super(_mapName, _mapVersion, _buildings, _nodes, _edges);
+    this._categories
+  ) : super(_mapName, _mapVersion, _buildings, _nodes, _edges, _categories);
 
   @override
   String getMapName() {
@@ -39,6 +41,16 @@ class MapData extends IMapData {
   @override
   List<Edge> getEdges() {
     return List.unmodifiable(_edges);
+  }
+
+  @override
+  List<Category> getCategories() {
+    return List.unmodifiable(_categories);
+  }
+
+  @override
+  String toString() {
+    return "(MapName: $_mapName, MapVersion: $_mapVersion, Buildings: $_buildings, Nodes: $_nodes, Edges: $_edges, Cats: $_categories)";
   }
 }
 
@@ -81,6 +93,11 @@ class Building extends IBuilding {
     nids.clear();
     return List.unmodifiable(mappedNids);
   }
+
+  @override
+  String toString() {
+    return "(Floors: $_floors)";
+  }
 }
 
 // Floor class that implements IFloor interface
@@ -99,6 +116,11 @@ class Floor extends IFloor {
   @override
   List<int> getNodeIds() {
     return List.unmodifiable(_nids);
+  }
+
+  @override
+  String toString() {
+    return "(Level: $_level, Nids:$_nids)";
   }
 }
 
@@ -155,6 +177,11 @@ class Node extends INode {
   Map<String, dynamic> getAdditional() {
     return Map.unmodifiable(_add);
   }
+
+  @override
+  String toString() {
+    return "(Name:$_name, Building:$_buildingName, Fid:$_fid, Coords:($_x,$_y), Cat:$_cat, Eids:$_eids, Add:$_add";
+  }
 }
 
 // Edge class that implements IEdge interface
@@ -180,5 +207,27 @@ class Edge extends IEdge {
   @override
   Map<String, dynamic> getAdditional() {
     return Map.unmodifiable(_add);
+  }
+
+  @override
+  String toString() {
+    return "(Nids:($_nid1, $_nid2), Dist:$_dist, Add:$_add";
+  }
+}
+
+class Category extends ICategory {
+  final String _name;
+
+  @override
+  Category(this._name) : super(_name);
+
+  @override
+  String getName() {
+    return _name;
+  }
+
+  @override
+  String toString() {
+    return "($_name)";
   }
 }

@@ -23,13 +23,13 @@ class JParser extends IParser {
       final context = contextStack.lastOrNull;
 
       // Save data to vb, increment elementCount, throw if data is incorrect
-      if (curr.type == JsonEventType.propertyValue && prev != null && prev.type == JsonEventType.propertyName) {
+      if (curr.type == JsonEventType.propertyValue && prev != null && prev.type == JsonEventType.propertyName && prev.value != null) {
         if (!JPContext.checkAttribute(context!, prev.value, curr.value)) {
           throw "Attribute ${prev.value} (value: ${curr.value}) doesn't belong to $context!";
         }
         vb[context][prev.value] = curr.value;
         // id is optional, so don't increment elementCount
-        if (prev.value != "id") {
+        if (prev.value != "id" && prev.value != "add") {
           elementCount[context] = elementCount[context]! + 1;
         }
 
@@ -72,7 +72,7 @@ class JParser extends IParser {
           }
         }
         // add is optional, so don't increment elementCount of parent context
-        if (context != JPContext.addedge || context != JPContext.addnode) {
+        if (context != JPContext.addedge && context != JPContext.addnode) {
           final prevContext = contextStack.elementAt(contextStack.length-2);
           elementCount[prevContext] = elementCount[prevContext]! + 1;
         }
@@ -116,10 +116,10 @@ class JParser extends IParser {
 
 
 void main() {
-  var json = File("test.json").openRead();
+  var json = File("../../../MapMaker/test.json").openRead();
   var parser = JParser();
   var mapdata = parser.getMapData(json);
   mapdata.then((value) => 
-    print(value!.getBuildings()["C1"]!.getFloors())
+    print(value)
   );
 }
