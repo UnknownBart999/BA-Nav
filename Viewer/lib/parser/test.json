@@ -36,6 +36,11 @@
         ],
         "edges": [
 
+        ],
+        "categories": [
+            {
+                "name": "test"
+            }
         ]
     }
 }

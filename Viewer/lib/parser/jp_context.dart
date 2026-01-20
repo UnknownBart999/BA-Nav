@@ -5,7 +5,7 @@ import 'package:json_events/json_events.dart';
 /// Represents the nested structure of the JSON file. Each context has an [openingLabel?], [parentContext?], and [openingSymbol] ('[' or '{')
 enum JPContext {
   root(null, null, JsonEventType.beginObject, 3),
-  mapData("mapData", JPContext.root, JsonEventType.beginObject, 3),
+  mapData("mapData", JPContext.root, JsonEventType.beginObject, 4),
   buildings("buildings", JPContext.mapData, JsonEventType.beginArray, null),
   building(null, JPContext.buildings, JsonEventType.beginObject, 2),
   floors("floors", JPContext.building, JsonEventType.beginArray, null),
@@ -17,7 +17,9 @@ enum JPContext {
   addnode("add", JPContext.node, JsonEventType.beginObject, null),
   edges("edges", JPContext.mapData, JsonEventType.beginArray, null),
   edge(null, JPContext.edges, JsonEventType.beginObject, 3),
-  addedge("add", JPContext.edge, JsonEventType.beginObject, null);
+  addedge("add", JPContext.edge, JsonEventType.beginObject, null),
+  categories("categories", JPContext.mapData, JsonEventType.beginArray, null),
+  category(null, JPContext.categories, JsonEventType.beginObject, 1);
 
   final String? openingLabel;
   final JPContext? parentContext;
@@ -38,9 +40,12 @@ enum JPContext {
       case JPContext.building when name == "name" && value is String:
       case JPContext.floor when (name == "id" || name == "level") && value is int || name == "floorPlan" && value is String:
       case JPContext.nids when value is int:
-      case JPContext.node when (name == "name" || name == "buildingName") && value is String || (name == "id" || name == "fid" || name == "x" || name == "y" || name == "cat") && value is int:
+      case JPContext.node when (name == "name" || name == "buildingName") && value is String || (name == "id" || name == "fid" || name == "x" || name == "y" || name == "cat") && value is int || name == "add" && value == null:
       case JPContext.eids when value is int:
-      case JPContext.edge when (name == "id" || name == "nid1" || name == "nid2") && value is int || name == "dist" || value is double:
+      case JPContext.edge when (name == "id" || name == "nid1" || name == "nid2") && value is int || name == "dist" && value is double || name == "add" && value == null:
+      case JPContext.category when name == "name" && value is String:
+      case JPContext.addnode:
+      case JPContext.addedge:
         return true;
       default:
         return false;
@@ -63,7 +68,7 @@ enum JPContext {
 
     switch (context) {
       case JPContext.root:
-        obj = MapDataFactory.createMapData(vbc["mapName"], vbc["mapVersion"], vb[JPContext.buildings], vb[JPContext.nodes].cast<INode>(), vb[JPContext.edges].cast<IEdge>());
+        obj = MapDataFactory.createMapData(vbc["mapName"], vbc["mapVersion"], vb[JPContext.buildings], vb[JPContext.nodes].cast<INode>(), vb[JPContext.edges].cast<IEdge>(), vb[JPContext.categories].cast<ICategory>());
         break;
       case JPContext.building:
         obj = MapDataFactory.createBuilding(vb[JPContext.floors].cast<IFloor>());
@@ -72,10 +77,15 @@ enum JPContext {
         obj = MapDataFactory.createFloor(vbc["level"], vb[JPContext.nids].cast<int>());
         break;
       case JPContext.node:
-        obj = MapDataFactory.createNode(vbc["name"], vbc["buildingName"], vbc["fid"], vbc["x"], vbc["y"], vbc["cat"], vb[JPContext.eids], vb[JPContext.addnode]);
+        obj = MapDataFactory.createNode(vbc["name"], vbc["buildingName"], vbc["fid"], vbc["x"], vbc["y"], vbc["cat"], vb[JPContext.eids].cast<int>(), vb[JPContext.addnode]);
+        vb[JPContext.addnode] = null;
         break;
       case JPContext.edge:
         obj = MapDataFactory.createEdge(vbc["nid1"], vbc["nid2"], vbc["dist"], vb[JPContext.addedge]);
+        vb[JPContext.addedge] = null;
+        break;
+      case JPContext.category:
+        obj = MapDataFactory.createCategory(vbc["name"]);
         break;
       default:
         return null;

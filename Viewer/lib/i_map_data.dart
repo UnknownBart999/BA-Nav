@@ -7,6 +7,7 @@ abstract class IMapData {
     Map<String, IBuilding> buildings,
     List<INode> nodes,
     List<IEdge> edges,
+    List<ICategory> categories
   );
 
   String getMapName();
@@ -14,6 +15,7 @@ abstract class IMapData {
   Map<String, IBuilding> getBuildings();
   List<INode> getNodes();
   List<IEdge> getEdges();
+  List<ICategory> getCategories();
 }
 
 abstract class IBuilding {
