@@ -298,14 +298,12 @@ class MapData(
             oldToNewEdgeId[edge.id] = index
         }
         
-        // Collect and sort all floors by current ID
-        val allFloors = mutableListOf<Floor>()
+        // Reindex floors per building (each building's floors start at 0)
         for (building in this.buildings) {
-            allFloors.addAll(building.floors)
-        }
-        allFloors.sortBy { it.id }
-        allFloors.forEachIndexed { index, floor ->
-            oldToNewFloorId[floor.id] = index
+            val buildingFloors = building.floors.sortedBy { it.level }
+            buildingFloors.forEachIndexed { index, floor ->
+                oldToNewFloorId[floor.id] = index
+            }
         }
         
         // Create new MapData with reindexed data
