@@ -103,14 +103,20 @@ class Building extends IBuilding {
 // Floor class that implements IFloor interface
 class Floor extends IFloor {
   final int _level;
+  final String _floorPlanPath;
   final List<int> _nids;
 
   @override
-  Floor(this._level, this._nids) : super(_level, _nids);
+  Floor(this._level, this._floorPlanPath, this._nids) : super(_level, _floorPlanPath, _nids);
 
   @override
   int getLevel() {
     return _level;
+  }
+
+  @override
+  String getFloorPlanPath() {
+    return _floorPlanPath;
   }
 
   @override
@@ -120,7 +126,7 @@ class Floor extends IFloor {
 
   @override
   String toString() {
-    return "(Level: $_level, Nids:$_nids)";
+    return "(Level: $_level, Path: $_floorPlanPath, Nids: $_nids)";
   }
 }
 

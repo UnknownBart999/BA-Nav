@@ -27,9 +27,10 @@ abstract class IBuilding {
 }
 
 abstract class IFloor {
-  const IFloor(int level, List<int> nids);
+  const IFloor(int level, String floorPlanPath, List<int> nids);
 
   int getLevel();
+  String getFloorPlanPath();
   List<int> getNodeIds();
 }
 

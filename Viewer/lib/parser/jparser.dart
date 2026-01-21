@@ -116,17 +116,18 @@ class JParser extends IParser {
 
 
 // TESTING CODE
-// void main() {
-//   var json = File("../../../MapMaker/University\ Campus_1.0.0.json").openRead();
-//   var parser = JParser();
-//   var mapdata = parser.getMapData(json);
-//   mapdata.then((value) {
-//     final start = value!.getNodes()[12];
-//     final goal = value.getNodes()[32];
-//     var path = astar(start, goal, value.getNodes(), value.getEdges(), value.getBuildings());
-//     for (var a in path) {
-//       print(value.getNodes().indexOf(a));
-//     }
-//   }
-//   );
-// }
+void main() {
+  var json = File("../../../MapMaker/University\ Campus_1.0.0.json").openRead();
+  var parser = JParser();
+  var mapdata = parser.getMapData(json);
+  mapdata.then((value) {
+    // final start = value!.getNodes()[12];
+    // final goal = value.getNodes()[32];
+    // var path = astar(start, goal, value.getNodes(), value.getEdges(), value.getBuildings());
+    // for (var a in path) {
+    //   print(value.getNodes().indexOf(a));
+    // }
+    print(value!.getBuildings()["Library"]!.getFloors()[0]);
+  }
+  );
+}

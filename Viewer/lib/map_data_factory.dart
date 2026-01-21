@@ -12,8 +12,8 @@ class MapDataFactory {
     return Building(floors.cast());
   }
 
-  static IFloor createFloor(int level, List<int> nids) {
-    return Floor(level, nids);
+  static IFloor createFloor(int level, String floorPlanPath, List<int> nids) {
+    return Floor(level, floorPlanPath, nids);
   }
 
   static INode createNode(String name, String buildingName, int fid, int x, int y, int cat, List<int> eids, Map<String, dynamic>? add) {

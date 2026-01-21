@@ -74,7 +74,7 @@ enum JPContext {
         obj = MapDataFactory.createBuilding(vb[JPContext.floors].cast<IFloor>());
         break;
       case JPContext.floor:
-        obj = MapDataFactory.createFloor(vbc["level"], vb[JPContext.nids].cast<int>());
+        obj = MapDataFactory.createFloor(vbc["level"], vbc["floorPlan"], vb[JPContext.nids].cast<int>());
         break;
       case JPContext.node:
         obj = MapDataFactory.createNode(vbc["name"], vbc["buildingName"], vbc["fid"], vbc["x"], vbc["y"], vbc["cat"], vb[JPContext.eids].cast<int>(), vb[JPContext.addnode]);
