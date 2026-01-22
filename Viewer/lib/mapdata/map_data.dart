@@ -67,12 +67,12 @@ class Building extends IBuilding {
   }
 
   @override
-  List<(int, String, int)> getNodeIds(List<Node> nodes) {
+  List<(int, String, int)> getNodeIds(List<INode> nodes) {
     return getNodesIdsByCategory(nodes, null);
   }
 
   @override
-  List<(int, String, int)> getNodesIdsByCategory(List<Node> nodes, int? cat) {
+  List<(int, String, int)> getNodesIdsByCategory(List<INode> nodes, int? cat) {
     List<(int, String, int)> mappedNids = [];
     List<int> nids = [];
 
@@ -83,7 +83,7 @@ class Building extends IBuilding {
 
     // Go through each node id, get the name for that node, add to map
     for (int nid in nids) {
-      Node node = nodes.elementAt(nid);
+      INode node = nodes.elementAt(nid);
 
       if (cat == null || node.getCategory() == cat) {
         mappedNids.add((node.getFloorId(), node.getName(), node.getCategory()));

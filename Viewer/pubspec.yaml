@@ -36,6 +36,7 @@ dependencies:
   cupertino_icons: ^1.0.8
   image: ^4.6.0
   json_events: ^1.2.2
+  collection: ^1.19.1
 
 dev_dependencies:
   flutter_test:

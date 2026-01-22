@@ -22,8 +22,8 @@ abstract class IBuilding {
   const IBuilding(List<Floor> floors);
 
   List<IFloor> getFloors();
-  List<(int, String, int)> getNodeIds(List<Node> nodes);
-  List<(int, String, int)> getNodesIdsByCategory(List<Node> nodes, int cat);
+  List<(int, String, int)> getNodeIds(List<INode> nodes);
+  List<(int, String, int)> getNodesIdsByCategory(List<INode> nodes, int cat);
 }
 
 abstract class IFloor {

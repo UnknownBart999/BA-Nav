@@ -1,5 +1,5 @@
-import 'package:ba_nav/i_map_data.dart';
-import 'package:ba_nav/map_data.dart';
+import 'package:ba_nav/mapdata/i_map_data.dart';
+import 'package:ba_nav/mapdata/map_data.dart';
 
 /// Contains factory methods for the map data classes
 class MapDataFactory {

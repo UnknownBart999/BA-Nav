@@ -1,5 +1,5 @@
-import 'package:ba_nav/i_map_data.dart';
-import 'package:ba_nav/map_data_factory.dart';
+import 'package:ba_nav/mapdata/i_map_data.dart';
+import 'package:ba_nav/mapdata/map_data_factory.dart';
 import 'package:json_events/json_events.dart';
 
 /// Represents the nested structure of the JSON file. Each context has an [openingLabel?], [parentContext?], and [openingSymbol] ('[' or '{')

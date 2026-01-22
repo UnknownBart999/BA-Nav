@@ -1,8 +1,8 @@
 import 'dart:convert';
 import 'dart:io';
 
-import 'package:ba_nav/astar/astar.dart';
-import 'package:ba_nav/i_map_data.dart';
+import 'package:ba_nav/path/astar.dart';
+import 'package:ba_nav/mapdata/i_map_data.dart';
 import 'package:ba_nav/parser/i_parser.dart';
 import 'package:ba_nav/parser/jp_context.dart';
 import 'package:json_events/json_events.dart';
@@ -121,13 +121,9 @@ void main() {
   var parser = JParser();
   var mapdata = parser.getMapData(json);
   mapdata.then((value) {
-    // final start = value!.getNodes()[12];
-    // final goal = value.getNodes()[32];
-    // var path = astar(start, goal, value.getNodes(), value.getEdges(), value.getBuildings());
-    // for (var a in path) {
-    //   print(value.getNodes().indexOf(a));
-    // }
-    print(value!.getBuildings()["Library"]!.getFloors()[0]);
+    var path = astar(12, 24, value!);
+    print(path);
+    //print(value!.getBuildings()["Library"]!.getFloors()[0]);
   }
   );
 }
