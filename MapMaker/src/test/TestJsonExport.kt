@@ -1,6 +1,9 @@
 package mapmaker.test
 
 import mapmaker.mapdata.*
+import tools.jackson.module.kotlin.jacksonObjectMapper
+import java.io.File
+import java.util.zip.ZipFile
 
 /**
  * Test Map 1: University Campus
@@ -209,28 +212,6 @@ fun createHospitalMap(): MapData {
     // Connect basement to ground floor
     mainHospital.floors[0].addCrossFloorEdge("Basement Elevator", "Main Elevator F1")
     
-    // Upload floor plan to Main Hospital Floor 1
-    try {
-        mainHospital.floors[1].uploadFloorPlan("sample_floor_plan.jpg")
-        
-        // Verify upload succeeded
-        if (mainHospital.floors[1].floorPlan.isEmpty()) {
-            throw Exception("Floor plan upload succeeded but data is empty!")
-        }
-        
-        println("✓ Floor plan uploaded successfully for Main Hospital Floor 1")
-        println("  Floor plan data size: ${mainHospital.floors[1].floorPlan.length} characters")
-        
-    } catch (e: java.io.FileNotFoundException) {
-        // File not found is acceptable - test can continue without floor plan
-        println("⚠ Warning: sample_floor_plan.jpg not found - skipping floor plan upload")
-        println("  Place sample_floor_plan.jpg in MapMaker directory to test floor plan upload")
-    } catch (e: Exception) {
-        // Any other error should fail the test
-        println("✗ ERROR: Floor plan upload failed: ${e.message}")
-        throw e
-    }
-    
     // Main Hospital Floor 2
     mainHospital.newFloor(2)
     mainHospital.floors[2].addNode("Main Elevator F2", 20, 5, 3)
@@ -256,6 +237,25 @@ fun createHospitalMap(): MapData {
     mainHospital.floors[3].addEdge("Main Elevator F3", "Cardiology")
     mainHospital.floors[3].addEdge("Main Elevator F3", "Neurology")
     mainHospital.floors[3].addEdge("Main Elevator F3", "Patient Rooms 301-310")
+    
+    // Upload floor plans from sample directory to various floors (after all floors are created)
+    try {
+        // Main Hospital Floor 1 (Ground floor) - floors[1]
+        mainHospital.floors[1].uploadFloorPlan("sample floorplans/pexels-anete-lusina-4792483.jpg")
+        println("✓ Floor plan uploaded for Main Hospital Floor 1")
+        
+        // Main Hospital Floor 2 - floors[2]
+        mainHospital.floors[2].uploadFloorPlan("sample floorplans/pexels-marina-zvada-844583049-34573691.jpg")
+        println("✓ Floor plan uploaded for Main Hospital Floor 2")
+        
+    } catch (e: java.io.FileNotFoundException) {
+        println("✗ ERROR: Sample floorplan file not found: ${e.message}")
+        println("  Expected files in 'sample floorplans' directory")
+        throw e
+    } catch (e: Exception) {
+        println("✗ ERROR: Floor plan upload failed: ${e.message}")
+        throw e
+    }
     
     // Building 2: Medical Center (3 floors)
     map.newBuilding("Medical Center")
@@ -474,35 +474,168 @@ fun createMallMap(): MapData {
     entertainment.floors[2].addEdge("Game Center", "Kids Play Area")
     entertainment.floors[2].addExternalEdge("From Main Mall F3", mainMall.floors[2].nodes[5]) // To Entertainment Wing F3
     
+    // Upload floor plan to Main Mall Floor 1
+    try {
+        mainMall.floors[0].uploadFloorPlan("sample floorplans/pexels-urmiejpg-10910751.jpg")
+        println("✓ Floor plan uploaded for Main Mall Floor 1")
+    } catch (e: Exception) {
+        println("⚠ Warning: Could not upload floor plan for Main Mall: ${e.message}")
+    }
+    
     println("✓ Mall Map created: 3 buildings, ${map.getNodes().size} nodes, ${map.getEdges().size} edges")
     return map
 }
 
+/**
+ * Verifies that the export created the expected ZIP archive with correct contents.
+ * The temporary directory should be cleaned up after archiving.
+ * 
+ * @param mapName Name of the map
+ * @param version Version of the map
+ * @param expectedFloorplanCount Number of floorplans expected in the export
+ * @return true if verification passed, false otherwise
+ */
+fun verifyExport(mapName: String, version: String, expectedFloorplanCount: Int): Boolean {
+    val directoryName = "${mapName}_${version}"
+    val exportDir = File(directoryName)
+    val zipFile = File("${directoryName}.zip")
+    
+    println("\n--- Verifying Export for $mapName ---")
+    
+    // Check that temporary directory was cleaned up
+    if (exportDir.exists()) {
+        println("✗ Temporary export directory should be deleted after archiving: ${exportDir.absolutePath}")
+        return false
+    }
+    println("✓ Temporary export directory cleaned up")
+    
+    // Check that ZIP archive was created
+    if (!zipFile.exists()) {
+        println("✗ ZIP archive not found: ${zipFile.absolutePath}")
+        return false
+    }
+    println("✓ ZIP archive created: ${zipFile.absolutePath}")
+    
+    // Extract and verify ZIP archive contents
+    var floorplanCount = 0
+    val floorplanPaths = mutableSetOf<String>()
+    
+    ZipFile(zipFile).use { zip ->
+        val entries = zip.entries().toList()
+        
+        // Find and read JSON file
+        val jsonEntry = entries.find { it.name.endsWith(".json") }
+        if (jsonEntry == null) {
+            println("✗ ZIP archive does not contain JSON file")
+            return false
+        }
+        println("✓ JSON file exists in archive: ${jsonEntry.name}")
+        
+        // Read and parse JSON from ZIP
+        val objectMapper = jacksonObjectMapper()
+        zip.getInputStream(jsonEntry).use { inputStream ->
+            val jsonTree = objectMapper.readTree(inputStream)
+            val buildings = jsonTree.get("mapData").get("buildings")
+            
+            // Collect floorplan paths from JSON
+            for (i in 0 until buildings.size()) {
+                val building = buildings.get(i)
+                val buildingName = building.get("name").asText()
+                val floors = building.get("floors")
+                
+                for (j in 0 until floors.size()) {
+                    val floor = floors.get(j)
+                    val floorLevel = floor.get("level").asInt()
+                    val floorPlan = floor.get("floorPlan").asText()
+                    
+                    if (floorPlan.isNotEmpty()) {
+                        floorplanCount++
+                        floorplanPaths.add(floorPlan)
+                        
+                        // Verify path is relative (starts with ./)
+                        if (!floorPlan.startsWith("./")) {
+                            println("✗ Floorplan path is not relative: $floorPlan (Building: $buildingName, Floor: $floorLevel)")
+                            return false
+                        }
+                        
+                        println("✓ Floorplan path in JSON: $buildingName Floor $floorLevel -> $floorPlan")
+                    }
+                }
+            }
+        }
+        
+        // Verify all floorplan images exist in ZIP
+        val imageEntries = entries.filter { it.name.endsWith(".jpg") || it.name.endsWith(".png") || it.name.endsWith(".jpeg") }
+        if (imageEntries.size != expectedFloorplanCount) {
+            println("✗ ZIP archive contains ${imageEntries.size} images, expected $expectedFloorplanCount")
+            return false
+        }
+        
+        // Verify each floorplan path references an actual file in the ZIP
+        for (floorplanPath in floorplanPaths) {
+            val imagePath = floorplanPath.substring(2) // Remove "./" prefix
+            val imageEntry = entries.find { it.name == imagePath }
+            if (imageEntry == null) {
+                println("✗ Floorplan image not found in ZIP: $imagePath")
+                return false
+            }
+        }
+        
+        println("✓ All $floorplanCount floorplan(s) verified with relative paths")
+        println("✓ ZIP archive verified: JSON file + ${imageEntries.size} image(s)")
+    }
+    
+    if (floorplanCount != expectedFloorplanCount) {
+        println("✗ Expected $expectedFloorplanCount floorplans, found $floorplanCount")
+        return false
+    }
+    
+    println("✓ Export verification passed for $mapName")
+    return true
+}
+
 fun main() {
     println("\n╔════════════════════════════════════════════════╗")
-    println("║      COMPREHENSIVE MAP EXPORT TESTS           ║")
+    println("║      COMPREHENSIVE MAP EXPORT TESTS            ║")
     println("╚════════════════════════════════════════════════╝")
+    
+    var allVerified = true
     
     // Create and export all three test maps
     val campusMap = createCampusMap()
     campusMap.export()
-    println("✓ Exported: University Campus_1.0.0.json\n")
+    println("✓ Exported: University Campus_1.0.0\n")
+    allVerified = verifyExport("University Campus", "1.0.0", 0) && allVerified
     
     val hospitalMap = createHospitalMap()
     hospitalMap.export()
-    println("✓ Exported: City Hospital_2.1.0.json\n")
+    println("✓ Exported: City Hospital_2.1.0\n")
+    allVerified = verifyExport("City Hospital", "2.1.0", 2) && allVerified
     
     val mallMap = createMallMap()
     mallMap.export()
-    println("✓ Exported: Metro Shopping Mall_3.0.2.json\n")
+    println("✓ Exported: Metro Shopping Mall_3.0.2\n")
+    allVerified = verifyExport("Metro Shopping Mall", "3.0.2", 1) && allVerified
     
-    println("╔════════════════════════════════════════════════╗")
-    println("║          ✓ ALL MAPS EXPORTED! ✓              ║")
-    println("╚════════════════════════════════════════════════╝")
+    if (allVerified) {
+        println("\n╔════════════════════════════════════════════════╗")
+        println("║    ✓ ALL MAPS EXPORTED AND VERIFIED! ✓       ║")
+        println("╚════════════════════════════════════════════════╝")
+    } else {
+        println("\n╔════════════════════════════════════════════════╗")
+        println("║      ✗ SOME VERIFICATIONS FAILED ✗           ║")
+        println("╚════════════════════════════════════════════════╝")
+    }
+    
+    // Clean up test ZIP files
+//    File("University Campus_1.0.0.zip").delete()
+//    File("City Hospital_2.1.0.zip").delete()
+//    File("Metro Shopping Mall_3.0.2.zip").delete()
+//    println("\n✓ Test cleanup: Removed exported ZIP files")
     
     println("\nSummary:")
-    println("• Campus Map: ${campusMap.buildings.size} buildings, ${campusMap.getNodes().size} nodes, ${campusMap.getEdges().size} edges")
-    println("• Hospital Map: ${hospitalMap.buildings.size} buildings, ${hospitalMap.getNodes().size} nodes, ${hospitalMap.getEdges().size} edges (with floor plan)")
-    println("• Mall Map: ${mallMap.buildings.size} buildings, ${mallMap.getNodes().size} nodes, ${mallMap.getEdges().size} edges")
+    println("• Campus Map: ${campusMap.buildings.size} buildings, ${campusMap.getNodes().size} nodes, ${campusMap.getEdges().size} edges (no floorplans)")
+    println("• Hospital Map: ${hospitalMap.buildings.size} buildings, ${hospitalMap.getNodes().size} nodes, ${hospitalMap.getEdges().size} edges (2 floorplans)")
+    println("• Mall Map: ${mallMap.buildings.size} buildings, ${mallMap.getNodes().size} nodes, ${mallMap.getEdges().size} edges (1 floorplan)")
     println("\nTotal: ${campusMap.getNodes().size + hospitalMap.getNodes().size + mallMap.getNodes().size} nodes across all maps")
 }

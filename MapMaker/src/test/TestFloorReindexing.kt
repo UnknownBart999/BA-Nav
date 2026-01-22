@@ -46,14 +46,15 @@ fun testFloorReindexing(): Boolean {
     
     // Export the map
     map.export("test_floor_reindex", false, null)
-    println("\n✓ Exported map to test_floor_reindex.json")
+    println("\n✓ Exported map")
     
-    // Read the exported JSON and verify floor IDs
+    // Read the exported JSON from the directory and verify floor IDs
     val objectMapper = jacksonObjectMapper()
-    val file = java.io.File("test_floor_reindex.json")
+    val exportDir = java.io.File("test_floor_reindex")
+    val file = java.io.File(exportDir, "test_floor_reindex.json")
     
     if (!file.exists()) {
-        println("✗ ERROR: Exported JSON file not found!")
+        println("✗ ERROR: Exported JSON file not found at ${file.absolutePath}")
         return false
     }
     
@@ -90,8 +91,11 @@ fun testFloorReindexing(): Boolean {
         }
     }
     
-    // Clean up test file
-    file.delete()
+    // Clean up test files
+    exportDir.deleteRecursively()
+    val zipFile = java.io.File("test_floor_reindex.zip")
+    zipFile.delete()
+    
     println("\n✓ All floor IDs correctly reindexed per building!")
     println("  Building 1: floors 0, 1, 2")
     println("  Building 2: floors 0, 1")

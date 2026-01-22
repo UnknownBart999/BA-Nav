@@ -3,11 +3,68 @@ package mapmaker.mapdata
 import kotlin.math.pow
 import kotlin.math.sqrt
 import java.io.File
-import java.io.ByteArrayOutputStream
 import java.io.FileNotFoundException
 import java.io.IOException
-import java.util.Base64
+import java.nio.file.Files
+import java.nio.file.StandardCopyOption
+import java.util.zip.ZipEntry
+import java.util.zip.ZipOutputStream
 import javax.imageio.ImageIO
+
+/**
+ * Helper function to validate a floor plan file path.
+ * Used by both Floor.uploadFloorPlan and MapData.export.
+ * 
+ * @param path File path to validate
+ * @throws java.io.FileNotFoundException if the file does not exist
+ * @throws Exception if the file is invalid
+ */
+internal fun validateFloorPlanPath(path: String) {
+    val file = File(path)
+    
+    // Check if file exists
+    if (!file.exists()) {
+        throw java.io.FileNotFoundException("Floor plan file not found: $path")
+    }
+    
+    // Check if file is readable
+    if (!file.canRead()) {
+        throw Exception("Floor plan file exists but cannot be read: $path")
+    }
+    
+    // Check if file is empty
+    if (file.length() == 0L) {
+        throw Exception("Floor plan file is empty: $path")
+    }
+    
+    // Check file extension
+    val extension = file.extension.lowercase()
+    if (extension !in listOf("png", "jpg", "jpeg")) {
+        throw Exception("Unsupported image format: $extension. Only PNG, JPG, and JPEG are supported.")
+    }
+    
+    try {
+        // Verify the image file is valid by attempting to read it
+        val bufferedImage = ImageIO.read(file)
+            ?: throw Exception("Failed to read image file. The file may be corrupted or in an unsupported format.")
+        
+        // Validate image has dimensions
+        if (bufferedImage.width <= 0 || bufferedImage.height <= 0) {
+            throw Exception("Invalid image dimensions: ${bufferedImage.width}x${bufferedImage.height}")
+        }
+    } catch (e: java.io.IOException) {
+        throw Exception("IO error while validating floor plan image: ${e.message}", e)
+    } catch (e: Exception) {
+        // Re-throw if already our exception
+        if (e.message?.startsWith("Failed to") == true || 
+            e.message?.startsWith("Invalid") == true ||
+            e.message?.startsWith("IO error") == true) {
+            throw e
+        }
+        // Wrap other exceptions
+        throw Exception("Unexpected error validating floor plan image: ${e.message}", e)
+    }
+}
 
 /**
  * MapData class. This class stores all data for a given map.
@@ -234,37 +291,160 @@ class MapData(
 
     /**
      * Exports the map to a JSON file with reindexed IDs to eliminate gaps.
+     * Creates a directory containing the JSON file and all floorplan images, then archives it as a ZIP.
      * 
      * @param name Optional custom name for the file (without extension). If null, uses map name.
      * @param includeVersion If true, appends version to filename. Default is true.
-     * @param path Optional directory path where file should be saved. If null, saves in current directory.
+     * @param path Optional directory path where export should be saved. If null, saves in current directory.
      */
     fun export(name: String? = null, includeVersion: Boolean = true, path: String? = null) {
         // Create reindexed copy of the map data
         val reindexedData = reindexMapData()
         
-        // Build filename
+        // Build directory name (without .json extension)
         val baseName = name ?: this.name
-        val fileName = if (includeVersion) {
-            "${baseName}_${this.version}.json"
+        val directoryName = if (includeVersion) {
+            "${baseName}_${this.version}"
         } else {
-            "${baseName}.json"
+            baseName
         }
         
-        // Build full file path
-        val fullPath = if (path != null) {
-            if (path.endsWith("/") || path.endsWith("\\")) {
-                path + fileName
-            } else {
-                path + "/" + fileName
+        // Determine export directory path
+        val exportBasePath = path ?: "."
+        val exportDirectory = File(exportBasePath, directoryName)
+        
+        // Safety check: ensure export directory is a subdirectory, not the base path itself
+        if (exportDirectory.canonicalPath == File(exportBasePath).canonicalPath) {
+            throw Exception("Export directory cannot be the same as the base path. This is a safety check to prevent accidental deletion.")
+        }
+        
+        // Create export directory
+        if (exportDirectory.exists()) {
+            // Safety check: verify directory only contains expected file types before deletion
+            verifyExportDirectoryContents(exportDirectory)
+            
+            // Clean existing directory (only deletes the specific output subdirectory)
+            exportDirectory.deleteRecursively()
+        }
+        exportDirectory.mkdirs()
+        
+        // Validate all floorplan paths before export
+        val floorplansToCopy = mutableListOf<Pair<File, String>>()
+        for (building in reindexedData.buildings) {
+            for (floor in building.floors) {
+                if (floor.floorPlan.isNotEmpty()) {
+                    try {
+                        validateFloorPlanPath(floor.floorPlan)
+                        val sourceFile = File(floor.floorPlan)
+                        val fileName = sourceFile.name
+                        floorplansToCopy.add(Pair(sourceFile, fileName))
+                    } catch (e: Exception) {
+                        throw Exception("Invalid floorplan path for ${building.name} floor ${floor.level}: ${e.message}")
+                    }
+                }
             }
-        } else {
-            fileName
         }
         
-        // Export using JSONExport
+        // Copy floorplan images to export directory
+        val floorplanFileMap = mutableMapOf<String, String>()
+        for ((sourceFile, fileName) in floorplansToCopy) {
+            val destFile = File(exportDirectory, fileName)
+            
+            // Handle duplicate filenames
+            var finalFileName = fileName
+            var counter = 1
+            var finalDestFile = destFile
+            while (finalDestFile.exists()) {
+                val nameWithoutExt = fileName.substringBeforeLast('.')
+                val ext = fileName.substringAfterLast('.')
+                finalFileName = "${nameWithoutExt}_${counter}.${ext}"
+                finalDestFile = File(exportDirectory, finalFileName)
+                counter++
+            }
+            
+            Files.copy(sourceFile.toPath(), finalDestFile.toPath(), StandardCopyOption.REPLACE_EXISTING)
+            // Store as relative path in current directory (e.g., "./floorplan.png")
+            floorplanFileMap[sourceFile.absolutePath] = "./${finalFileName}"
+        }
+        
+        // Update floorplan paths in reindexed data to relative paths for portability
+        for (building in reindexedData.buildings) {
+            for (floor in building.floors) {
+                if (floor.floorPlan.isNotEmpty()) {
+                    val sourceFile = File(floor.floorPlan)
+                    floor.floorPlan = floorplanFileMap[sourceFile.absolutePath] ?: floor.floorPlan
+                }
+            }
+        }
+        
+        // Export JSON to the directory
+        val jsonFileName = "${directoryName}.json"
+        val jsonFilePath = File(exportDirectory, jsonFileName).absolutePath
         val jsonExport = mapmaker.jsonexport.JSONExport(reindexedData)
-        jsonExport.exportToPath(fullPath)
+        jsonExport.exportToPath(jsonFilePath)
+        
+        // Create ZIP archive
+        val zipFileName = "${directoryName}.zip"
+        val zipFile = File(exportBasePath, zipFileName)
+        createZipArchive(exportDirectory, zipFile)
+        
+        // Clean up temporary export directory (all files are in the ZIP now)
+        exportDirectory.deleteRecursively()
+        
+        println("Export completed successfully!")
+        println("Archive: ${zipFile.absolutePath}")
+    }
+    
+    /**
+     * Helper function to create a ZIP archive from a directory.
+     * 
+     * @param sourceDir Directory to archive
+     * @param zipFile Output ZIP file
+     */
+    private fun createZipArchive(sourceDir: File, zipFile: File) {
+        ZipOutputStream(zipFile.outputStream()).use { zipOut ->
+            sourceDir.walkTopDown().forEach { file ->
+                if (file.isFile) {
+                    val relativePath = file.relativeTo(sourceDir).path
+                    val zipEntry = ZipEntry(relativePath.replace("\\", "/"))
+                    zipOut.putNextEntry(zipEntry)
+                    file.inputStream().use { input ->
+                        input.copyTo(zipOut)
+                    }
+                    zipOut.closeEntry()
+                }
+            }
+        }
+    }
+    
+    /**
+     * Helper function to verify export directory only contains expected file types.
+     * This is a safety check to prevent accidentally deleting user directories.
+     * 
+     * @param directory Directory to check
+     * @throws Exception if directory contains unexpected file types
+     */
+    private fun verifyExportDirectoryContents(directory: File) {
+        val allowedExtensions = listOf("json", "png", "jpg", "jpeg")
+        val unexpectedFiles = mutableListOf<String>()
+        
+        directory.walkTopDown().forEach { file ->
+            if (file.isFile) {
+                val extension = file.extension.lowercase()
+                if (extension !in allowedExtensions) {
+                    unexpectedFiles.add(file.relativeTo(directory).path)
+                }
+            }
+        }
+        
+        if (unexpectedFiles.isNotEmpty()) {
+            throw Exception(
+                "Export directory contains unexpected file types. " +
+                "Only JSON, PNG, JPG, and JPEG files are expected in an export directory. " +
+                "This is a safety check to prevent accidental deletion of user data. " +
+                "Unexpected files found: ${unexpectedFiles.joinToString(", ")}"
+            )
+        }
     }
 
     /**
@@ -913,149 +1093,19 @@ class Floor(
     }
 
     /**
-     * Uploads a new floor plan and converts it to a String.
-     * Supports PNG, JPG, and JPEG formats. Converts to PNG and encodes as Base64 for JSON storage.
+     * Uploads a new floor plan by storing its file path.
+     * Supports PNG, JPG, and JPEG formats.
      * 
      * @param path File path to the floor plan image.
      * @throws java.io.FileNotFoundException if the file does not exist
      * @throws Exception if the file is corrupted or cannot be processed
      */
     override fun uploadFloorPlan(path: String) {
+        validateFloorPlanPath(path)
+        
+        // Store the absolute path to ensure consistency
         val file = File(path)
-        
-        // Check if file exists
-        if (!file.exists()) {
-            throw java.io.FileNotFoundException("Floor plan file not found: $path")
-        }
-        
-        // Check if file is readable
-        if (!file.canRead()) {
-            throw Exception("Floor plan file exists but cannot be read: $path")
-        }
-        
-        // Check if file is empty
-        if (file.length() == 0L) {
-            throw Exception("Floor plan file is empty: $path")
-        }
-        
-        // Check file extension
-        val extension = file.extension.lowercase()
-        if (extension !in listOf("png", "jpg", "jpeg")) {
-            throw Exception("Unsupported image format: $extension. Only PNG, JPG, and JPEG are supported.")
-        }
-        
-        try {
-            // Read the image file
-            val bufferedImage = ImageIO.read(file)
-                ?: throw Exception("Failed to read image file. The file may be corrupted or in an unsupported format.")
-            
-            // Validate image has dimensions
-            if (bufferedImage.width <= 0 || bufferedImage.height <= 0) {
-                throw Exception("Invalid image dimensions: ${bufferedImage.width}x${bufferedImage.height}")
-            }
-            
-            // Convert to PNG format and write to byte array
-            val outputStream = ByteArrayOutputStream()
-            val success = ImageIO.write(bufferedImage, "png", outputStream)
-            
-            if (!success) {
-                throw Exception("Failed to encode image as PNG.")
-            }
-            
-            // Convert byte array to Base64 string
-            val imageBytes = outputStream.toByteArray()
-            
-            // Verify we have data
-            if (imageBytes.isEmpty()) {
-                throw Exception("Image conversion produced no data.")
-            }
-            
-            val base64String = Base64.getEncoder().encodeToString(imageBytes)
-            
-            // Verify Base64 encoding worked
-            if (base64String.isEmpty()) {
-                throw Exception("Base64 encoding failed - empty string produced.")
-            }
-            
-            // Store in floorPlan field
-            this.floorPlan = base64String
-            
-        } catch (e: java.io.IOException) {
-            throw Exception("IO error while processing floor plan image: ${e.message}", e)
-        } catch (e: Exception) {
-            // Re-throw if already our exception
-            if (e.message?.startsWith("Failed to") == true || 
-                e.message?.startsWith("Invalid") == true ||
-                e.message?.startsWith("Image") == true ||
-                e.message?.startsWith("Base64") == true) {
-                throw e
-            }
-            // Wrap other exceptions
-            throw Exception("Unexpected error processing floor plan image: ${e.message}", e)
-        }
-    }
-    
-    /**
-     * Helper function to get the decoded floor plan image as a ByteArray.
-     * Useful for extracting the image from the Base64 string.
-     * 
-     * @return ByteArray of the PNG image data, or null if no floor plan is set.
-     * @throws Exception if floor plan data is corrupted
-     */
-    fun getFloorPlanBytes(): ByteArray? {
-        if (this.floorPlan.isEmpty()) {
-            return null
-        }
-        
-        return try {
-            val decoded = Base64.getDecoder().decode(this.floorPlan)
-            if (decoded.isEmpty()) {
-                throw Exception("Floor plan data decoded to empty array")
-            }
-            decoded
-        } catch (e: IllegalArgumentException) {
-            throw Exception("Floor plan data is not valid Base64: ${e.message}", e)
-        } catch (e: Exception) {
-            throw Exception("Failed to decode floor plan data: ${e.message}", e)
-        }
-    }
-    
-    /**
-     * Helper function to save the floor plan to a file.
-     * 
-     * @param outputPath Path where the PNG file should be saved.
-     * @throws Exception if no floor plan data exists or file cannot be written
-     */
-    fun saveFloorPlan(outputPath: String) {
-        if (outputPath.isBlank()) {
-            throw Exception("Output path cannot be empty")
-        }
-        
-        val imageBytes = getFloorPlanBytes()
-            ?: throw Exception("No floor plan data to save. Upload a floor plan first using uploadFloorPlan().")
-        
-        try {
-            val outputFile = File(outputPath)
-            
-            // Check if parent directory exists
-            outputFile.parentFile?.let { parent ->
-                if (!parent.exists()) {
-                    throw Exception("Parent directory does not exist: ${parent.absolutePath}")
-                }
-                if (!parent.canWrite()) {
-                    throw Exception("Cannot write to directory: ${parent.absolutePath}")
-                }
-            }
-            
-            outputFile.writeBytes(imageBytes)
-            
-            // Verify file was written
-            if (!outputFile.exists() || outputFile.length() == 0L) {
-                throw Exception("File was not written successfully")
-            }
-        } catch (e: IOException) {
-            throw Exception("IO error while saving floor plan: ${e.message}", e)
-        }
+        this.floorPlan = file.absolutePath
     }
 }
 
