@@ -1,6 +1,11 @@
 library;
 
 import 'dart:io';
+import 'package:archive/archive.dart';
+import 'package:archive/archive_io.dart';
+import 'package:ba_nav/mapdata/map_data.dart';
+import 'package:path_provider/path_provider.dart';
+import 'package:path/path.dart' as p;
 
 import 'package:ba_nav/path/astar.dart';
 import 'package:ba_nav/mapdata/i_map_data.dart';
@@ -106,24 +111,46 @@ Future<(int, String, int, img.Image, List<(int, int)>)> _getSegment(int segNum) 
 
 // Loads the map file from path
 Future<bool> openMap(String path) async {
-  final parser = JParser();
-  final file = File("$path/map.json");
-  if (!file.existsSync()) {
+  final zipFile = File(path);
+  if (!zipFile.existsSync()) {
+    loadedMap = _defaultMap;
+    loadedMapPath = _defaultMapPath;
     return false;
   }
 
-  final byteStream = file.openRead();
-  final mapData = await parser.getMapData(byteStream);
+  final appDir = await getApplicationDocumentsDirectory();
+  final zipName = p.basenameWithoutExtension(path);
+  final targetDir = Directory(p.join(appDir.path, zipName));
+  // Unzips file if the directory doesn't exist yet
+  if (!targetDir.existsSync()) {
+    final bytes = await zipFile.readAsBytes();
+    final archive = ZipDecoder().decodeBytes(bytes);
+    targetDir.createSync(recursive: true);
 
+    for (final file in archive.files) {
+      final filePath = p.join(targetDir.path, file.name);
+
+      if (file.isFile) {
+        final outFile = File(filePath);
+        await outFile.parent.create(recursive: true);
+        await outFile.writeAsBytes(file.content as List<int>);
+      } else {
+        await Directory(filePath).create(recursive: true);
+      }
+    }
+  }
+
+  final mapFile = File("${targetDir.path}/map.json");
+  final parser = JParser();
+  final mapData = await parser.getMapData(mapFile.openRead());
   if (mapData == null) {
     loadedMap = _defaultMap;
     loadedMapPath = _defaultMapPath;
     return false;
-  } else {
-    loadedMap = mapData;
-    loadedMapPath = path;
-    return true;
   }
+  loadedMap = mapData;
+  loadedMapPath = targetDir.path;
+  return true;
 }
 
 // Gets the building names in the loaded Map.
@@ -182,3 +209,15 @@ List<(String, int, String, String)> getAllNodes() {
 
   return output;
 }
+
+// TESTING CODE
+// void main() {
+//   openMap("University\ Campus_1.0.0").then((a) {
+//     if (a) {
+//       //tripFromFind(12, "Outside", segmentNumber)
+//       tripFromTo(12, 3, 3).then((value) {
+//         print(value);
+//       });
+//     }
+//   });
+// }

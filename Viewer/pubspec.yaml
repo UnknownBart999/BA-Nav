@@ -37,6 +37,9 @@ dependencies:
   image: ^4.6.0
   json_events: ^1.2.2
   collection: ^1.19.1
+  archive: ^4.0.7
+  path_provider: ^2.1.5
+  path: ^1.9.1
 
 dev_dependencies:
   flutter_test:
