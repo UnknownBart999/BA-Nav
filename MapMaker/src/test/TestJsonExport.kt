@@ -36,7 +36,7 @@ fun createCampusMap(): MapData {
     
     // Building 1: Library (3 floors)
     map.newBuilding("Library")
-    val library = map.buildings[0]
+    val library = map.buildings.find { it.name == "Library" }!!
     
     // Library Ground Floor (0)
     library.newFloor(0)
@@ -50,7 +50,11 @@ fun createCampusMap(): MapData {
     library.floors[0].addEdge("Circulation Desk", "Reading Room 1")
     library.floors[0].addEdge("Circulation Desk", "Library Stairwell F0")
     library.floors[0].addEdge("Circulation Desk", "Library to Student Center")
-    library.floors[0].addExternalEdge("Library Entrance", map.externalNodes[1]) // Connect to Quad
+    
+    // Get Outside building floor 0 to access external nodes
+    val outsideFloor = map.buildings.find { it.name == "Outside" }!!.floors[0]
+    val quadCenter = outsideFloor.nodes.find { it.name == "Quad Center" }!!
+    library.floors[0].addExternalEdge("Library Entrance", quadCenter) // Connect to Quad
     
     // Library Floor 1
     library.newFloor(1)
@@ -76,7 +80,7 @@ fun createCampusMap(): MapData {
     
     // Building 2: Student Center (2 floors)
     map.newBuilding("Student Center")
-    val studentCenter = map.buildings[1]
+    val studentCenter = map.buildings.find { it.name == "Student Center" }!!
     
     // Student Center Ground Floor (0)
     studentCenter.newFloor(0)
@@ -91,8 +95,9 @@ fun createCampusMap(): MapData {
     studentCenter.floors[0].addEdge("Cafeteria", "SC Stairwell F0")
     studentCenter.floors[0].addEdge("Student Center Entrance", "Walkway to Library")
     
-    // Connect the walkway between buildings
-    studentCenter.floors[0].addExternalEdge("Walkway to Library", library.floors[0].nodes[4]) // Library to Student Center node
+    // Connect the walkway between buildings (library to student center node)
+    val libraryToStudentCenter = library.floors[0].nodes.find { it.name == "Library to Student Center" }!!
+    studentCenter.floors[0].addExternalEdge("Walkway to Library", libraryToStudentCenter)
     
     // Student Center Floor 1
     studentCenter.newFloor(1)
@@ -108,7 +113,7 @@ fun createCampusMap(): MapData {
     
     // Building 3: Science Building (4 floors)
     map.newBuilding("Science Building")
-    val science = map.buildings[2]
+    val science = map.buildings.find { it.name == "Science Building" }!!
     
     // Science Building Ground Floor (0)
     science.newFloor(0)
@@ -120,7 +125,9 @@ fun createCampusMap(): MapData {
     science.floors[0].addEdge("Science Entrance", "Lab 101")
     science.floors[0].addEdge("Lab 101", "Lab 102")
     science.floors[0].addEdge("Lab 102", "Science Stairwell F0")
-    science.floors[0].addExternalEdge("Science Entrance", map.externalNodes[3]) // Connect to Parking Lot B
+    
+    val parkingLotB = outsideFloor.nodes.find { it.name == "Parking Lot B" }!!
+    science.floors[0].addExternalEdge("Science Entrance", parkingLotB) // Connect to Parking Lot B
     
     // Science Building Floors 1-3
     for (floor in 1..3) {
@@ -177,7 +184,7 @@ fun createHospitalMap(): MapData {
     
     // Building 1: Main Hospital (4 floors including basement)
     map.newBuilding("Main Hospital")
-    val mainHospital = map.buildings[0]
+    val mainHospital = map.buildings.find { it.name == "Main Hospital" }!!
     
     // Main Hospital Basement -1
     mainHospital.newFloor(-1)
@@ -206,8 +213,13 @@ fun createHospitalMap(): MapData {
     mainHospital.floors[1].addEdge("Reception", "Radiology")
     mainHospital.floors[1].addEdge("Reception", "Pharmacy")
     mainHospital.floors[1].addEdge("Reception", "Main Elevator F1")
-    mainHospital.floors[1].addExternalEdge("Main Lobby", map.externalNodes[0])
-    mainHospital.floors[1].addExternalEdge("Emergency Room", map.externalNodes[1])
+    
+    // Get Outside building floor 0 to access external nodes
+    val outsideFloor = map.buildings.find { it.name == "Outside" }!!.floors[0]
+    val mainHospitalEntrance = outsideFloor.nodes.find { it.name == "Main Hospital Entrance" }!!
+    val emergencyEntrance = outsideFloor.nodes.find { it.name == "Emergency Entrance" }!!
+    mainHospital.floors[1].addExternalEdge("Main Lobby", mainHospitalEntrance)
+    mainHospital.floors[1].addExternalEdge("Emergency Room", emergencyEntrance)
     
     // Connect basement to ground floor
     mainHospital.floors[0].addCrossFloorEdge("Basement Elevator", "Main Elevator F1")
@@ -259,7 +271,7 @@ fun createHospitalMap(): MapData {
     
     // Building 2: Medical Center (3 floors)
     map.newBuilding("Medical Center")
-    val medCenter = map.buildings[1]
+    val medCenter = map.buildings.find { it.name == "Medical Center" }!!
     
     // Medical Center Floor 1
     medCenter.newFloor(1)
@@ -285,7 +297,8 @@ fun createHospitalMap(): MapData {
     medCenter.floors[1].addEdge("Med Center Elevator F2", "Bridge from Main Hospital")
     
     // Connect the bridge between buildings on Floor 2
-    medCenter.floors[1].addExternalEdge("Bridge from Main Hospital", mainHospital.floors[2].nodes[4]) // Bridge to Medical Center node
+    val bridgeToMedicalCenter = mainHospital.floors[2].nodes.find { it.name == "Bridge to Medical Center" }!!
+    medCenter.floors[1].addExternalEdge("Bridge from Main Hospital", bridgeToMedicalCenter)
     
     // Medical Center Floor 3
     medCenter.newFloor(3)
@@ -337,7 +350,7 @@ fun createMallMap(): MapData {
     
     // Building 1: Main Mall (3 floors)
     map.newBuilding("Main Mall")
-    val mainMall = map.buildings[0]
+    val mainMall = map.buildings.find { it.name == "Main Mall" }!!
     
     // Main Mall Floor 1
     mainMall.newFloor(1)
@@ -359,7 +372,11 @@ fun createMallMap(): MapData {
     mainMall.floors[0].addEdge("South Corridor F1", "Store 103")
     mainMall.floors[0].addEdge("Central Court F1", "Central Escalator F1")
     mainMall.floors[0].addEdge("South Corridor F1", "To Food Court F1")
-    mainMall.floors[0].addExternalEdge("Main Entrance", map.externalNodes[0]) // Main Plaza
+    
+    // Get Outside building floor 0 to access external nodes
+    val outsideFloor = map.buildings.find { it.name == "Outside" }!!.floors[0]
+    val mainPlaza = outsideFloor.nodes.find { it.name == "Main Plaza" }!!
+    mainMall.floors[0].addExternalEdge("Main Entrance", mainPlaza) // Main Plaza
     
     // Main Mall Floor 2
     mainMall.newFloor(2)
@@ -401,7 +418,7 @@ fun createMallMap(): MapData {
     
     // Building 2: Food Court Wing (2 floors)
     map.newBuilding("Food Court Wing")
-    val foodCourt = map.buildings[1]
+    val foodCourt = map.buildings.find { it.name == "Food Court Wing" }!!
     
     // Food Court Floor 1
     foodCourt.newFloor(1)
@@ -419,8 +436,11 @@ fun createMallMap(): MapData {
     foodCourt.floors[0].addEdge("Food Court Seating", "Restaurant 3")
     foodCourt.floors[0].addEdge("Food Court Seating", "Food Court Escalator F1")
     foodCourt.floors[0].addEdge("Food Court Seating", "Patio Exit")
-    foodCourt.floors[0].addExternalEdge("From Main Mall F1", mainMall.floors[0].nodes[8]) // To Food Court F1
-    foodCourt.floors[0].addExternalEdge("Patio Exit", map.externalNodes[5]) // Food Court Patio
+    
+    val toFoodCourtF1 = mainMall.floors[0].nodes.find { it.name == "To Food Court F1" }!!
+    val foodCourtPatio = outsideFloor.nodes.find { it.name == "Food Court Patio" }!!
+    foodCourt.floors[0].addExternalEdge("From Main Mall F1", toFoodCourtF1) // To Food Court F1
+    foodCourt.floors[0].addExternalEdge("Patio Exit", foodCourtPatio) // Food Court Patio
     
     // Food Court Floor 2
     foodCourt.newFloor(2)
@@ -433,11 +453,13 @@ fun createMallMap(): MapData {
     foodCourt.floors[1].addEdge("From Main Mall F2", "Food Court Escalator F2")
     foodCourt.floors[1].addEdge("Food Court Escalator F2", "Restaurant 4")
     foodCourt.floors[1].addEdge("Food Court Escalator F2", "Bar & Lounge")
-    foodCourt.floors[1].addExternalEdge("From Main Mall F2", mainMall.floors[1].nodes[8]) // To Food Court F2
+    
+    val toFoodCourtF2 = mainMall.floors[1].nodes.find { it.name == "To Food Court F2" }!!
+    foodCourt.floors[1].addExternalEdge("From Main Mall F2", toFoodCourtF2) // To Food Court F2
     
     // Building 3: Entertainment Wing (3 floors)
     map.newBuilding("Entertainment Wing")
-    val entertainment = map.buildings[2]
+    val entertainment = map.buildings.find { it.name == "Entertainment Wing" }!!
     
     // Entertainment Floor 1
     entertainment.newFloor(1)
@@ -449,7 +471,9 @@ fun createMallMap(): MapData {
     entertainment.floors[0].addEdge("Entertainment Entrance", "Arcade")
     entertainment.floors[0].addEdge("Arcade", "Bowling Alley")
     entertainment.floors[0].addEdge("Entertainment Entrance", "Entertainment Escalator F1")
-    entertainment.floors[0].addExternalEdge("Entertainment Entrance", map.externalNodes[3]) // East Parking
+    
+    val eastParking = outsideFloor.nodes.find { it.name == "East Parking" }!!
+    entertainment.floors[0].addExternalEdge("Entertainment Entrance", eastParking) // East Parking
     
     // Entertainment Floor 2
     entertainment.newFloor(2)
@@ -472,7 +496,9 @@ fun createMallMap(): MapData {
     entertainment.floors[2].addEdge("Entertainment Escalator F3", "From Main Mall F3")
     entertainment.floors[2].addEdge("Entertainment Escalator F3", "Game Center")
     entertainment.floors[2].addEdge("Game Center", "Kids Play Area")
-    entertainment.floors[2].addExternalEdge("From Main Mall F3", mainMall.floors[2].nodes[5]) // To Entertainment Wing F3
+    
+    val toEntertainmentWingF3 = mainMall.floors[2].nodes.find { it.name == "To Entertainment Wing F3" }!!
+    entertainment.floors[2].addExternalEdge("From Main Mall F3", toEntertainmentWingF3) // To Entertainment Wing F3
     
     // Upload floor plan to Main Mall Floor 1
     try {
@@ -594,6 +620,96 @@ fun verifyExport(mapName: String, version: String, expectedFloorplanCount: Int):
     return true
 }
 
+/**
+ * Verifies that the Outside building is properly included in the JSON export.
+ * 
+ * @param jsonFilePath Path to the exported JSON file (in ZIP)
+ * @return true if verification passed, false otherwise
+ */
+fun verifyOutsideBuildingInExport(zipFilePath: String): Boolean {
+    println("\n--- Verifying Outside Building in Export ---")
+    
+    val zipFile = java.util.zip.ZipFile(File(zipFilePath))
+    
+    zipFile.use { zip ->
+        val entries = zip.entries().toList()
+        
+        // Find and read JSON file
+        val jsonEntry = entries.find { it.name.endsWith(".json") }
+        if (jsonEntry == null) {
+            println("✗ JSON file not found in ZIP")
+            return false
+        }
+        
+        val objectMapper = jacksonObjectMapper()
+        zip.getInputStream(jsonEntry).use { inputStream ->
+            val jsonTree = objectMapper.readTree(inputStream)
+            val buildings = jsonTree.get("mapData").get("buildings")
+            
+            // Verify Outside building exists
+            if (buildings.size() == 0) {
+                println("✗ No buildings found in export")
+                return false
+            }
+            
+            // Verify first building is "Outside"
+            val firstBuilding = buildings.get(0)
+            val firstBuildingName = firstBuilding.get("name").asText()
+            if (firstBuildingName != "Outside") {
+                println("✗ First building should be 'Outside', found '$firstBuildingName'")
+                return false
+            }
+            println("✓ First building in export is 'Outside'")
+            
+            // Verify Outside building has exactly one floor
+            val floors = firstBuilding.get("floors")
+            if (floors.size() != 1) {
+                println("✗ Outside building should have 1 floor, found ${floors.size()}")
+                return false
+            }
+            println("✓ Outside building has exactly one floor")
+            
+            // Verify floor is level 0 with id 0
+            val outsideFloor = floors.get(0)
+            val floorId = outsideFloor.get("id").asInt()
+            val floorLevel = outsideFloor.get("level").asInt()
+            
+            if (floorId != 0) {
+                println("✗ Outside floor should have id 0, found $floorId")
+                return false
+            }
+            if (floorLevel != 0) {
+                println("✗ Outside floor should have level 0, found $floorLevel")
+                return false
+            }
+            println("✓ Outside floor has id 0 and level 0")
+            
+            // Verify external nodes have buildingName "Outside"
+            val nodes = jsonTree.get("mapData").get("nodes")
+            var outsideNodeCount = 0
+            for (i in 0 until nodes.size()) {
+                val node = nodes.get(i)
+                val buildingName = node.get("buildingName").asText()
+                if (buildingName == "Outside") {
+                    outsideNodeCount++
+                    val fid = node.get("fid").asInt()
+                    if (fid != 0) {
+                        println("✗ Outside node has fid $fid, should be 0")
+                        return false
+                    }
+                }
+            }
+            
+            if (outsideNodeCount > 0) {
+                println("✓ Found $outsideNodeCount external nodes with buildingName='Outside' and fid=0")
+            }
+        }
+    }
+    
+    println("✓ Outside building verification passed")
+    return true
+}
+
 fun main() {
     println("\n╔════════════════════════════════════════════════╗")
     println("║      COMPREHENSIVE MAP EXPORT TESTS            ║")
@@ -606,24 +722,27 @@ fun main() {
     campusMap.export()
     println("✓ Exported: University Campus_1.0.0\n")
     allVerified = verifyExport("University Campus", "1.0.0", 0) && allVerified
+    allVerified = verifyOutsideBuildingInExport("University Campus_1.0.0.zip") && allVerified
     
     val hospitalMap = createHospitalMap()
     hospitalMap.export()
     println("✓ Exported: City Hospital_2.1.0\n")
     allVerified = verifyExport("City Hospital", "2.1.0", 2) && allVerified
+    allVerified = verifyOutsideBuildingInExport("City Hospital_2.1.0.zip") && allVerified
     
     val mallMap = createMallMap()
     mallMap.export()
     println("✓ Exported: Metro Shopping Mall_3.0.2\n")
     allVerified = verifyExport("Metro Shopping Mall", "3.0.2", 1) && allVerified
+    allVerified = verifyOutsideBuildingInExport("Metro Shopping Mall_3.0.2.zip") && allVerified
     
     if (allVerified) {
         println("\n╔════════════════════════════════════════════════╗")
-        println("║    ✓ ALL MAPS EXPORTED AND VERIFIED! ✓       ║")
+        println("║    ✓ ALL MAPS EXPORTED AND VERIFIED! ✓         ║")
         println("╚════════════════════════════════════════════════╝")
     } else {
         println("\n╔════════════════════════════════════════════════╗")
-        println("║      ✗ SOME VERIFICATIONS FAILED ✗           ║")
+        println("║      ✗ SOME VERIFICATIONS FAILED ✗             ║")
         println("╚════════════════════════════════════════════════╝")
     }
     

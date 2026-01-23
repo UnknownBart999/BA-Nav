@@ -14,8 +14,6 @@ internal interface IMapData {
     var name: String
     var version: String
     val buildings: ArrayList<Building>
-    val externalNodes: ArrayList<Node>
-    val externalEdges: ArrayList<Edge>
     var categories: ArrayList<String>
 
     /**

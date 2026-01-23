@@ -2,15 +2,26 @@ package mapmaker.test
 
 import tools.jackson.module.kotlin.jacksonObjectMapper
 import java.io.File
+import java.util.zip.ZipFile
 
 data class NodeInfo(val id: Int, val buildingName: String, val fid: Int)
 data class EdgeInfo(val id: Int, val nid1: Int, val nid2: Int, val dist: Float)
 
-fun validateEdgeDistances(jsonFilePath: String): Boolean {
-    println("\n========== Validating Edge Distances in $jsonFilePath ==========")
+fun validateEdgeDistances(zipFilePath: String): Boolean {
+    println("\n========== Validating Edge Distances in $zipFilePath ==========")
     
     val objectMapper = jacksonObjectMapper()
-    val jsonTree = objectMapper.readTree(File(jsonFilePath))
+    val zipFile = ZipFile(File(zipFilePath))
+    
+    // Read map.json from the ZIP archive
+    val jsonTree = zipFile.use { zip ->
+        val jsonEntry = zip.entries().toList().find { it.name == "map.json" }
+            ?: throw Exception("map.json not found in ZIP archive")
+        
+        zip.getInputStream(jsonEntry).use { inputStream ->
+            objectMapper.readTree(inputStream)
+        }
+    }
     
     // Parse nodes to build a map of node ID -> building & floor
     val nodeMap = mutableMapOf<Int, NodeInfo>()
@@ -134,13 +145,13 @@ fun validateEdgeDistances(jsonFilePath: String): Boolean {
 
 fun main() {
     println("\n╔════════════════════════════════════════════════╗")
-    println("║      EDGE DISTANCE VALIDATION TEST            ║")
+    println("║       EDGE DISTANCE VALIDATION TEST            ║")
     println("╚════════════════════════════════════════════════╝")
     
     val files = listOf(
-        "University Campus_1.0.0.json",
-        "City Hospital_2.1.0.json",
-        "Metro Shopping Mall_3.0.2.json"
+        "University Campus_1.0.0.zip",
+        "City Hospital_2.1.0.zip",
+        "Metro Shopping Mall_3.0.2.zip"
     )
     
     var allPassed = true

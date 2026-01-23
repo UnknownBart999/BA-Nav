@@ -57,7 +57,8 @@ class JSONExport {
     fun export() {
 
         val objectMapper = jacksonObjectMapper()
-        objectMapper.writeValue(File(this.exportData.mapName+"_"+this.exportData.mapVersion+".json"), this.exportData)
+        val file: File = File("map.json")
+        objectMapper.writeValue(file, this.exportData)
 
     }
 
