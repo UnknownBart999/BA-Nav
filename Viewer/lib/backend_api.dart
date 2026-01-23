@@ -3,7 +3,6 @@ library;
 import 'dart:io';
 import 'package:archive/archive.dart';
 import 'package:archive/archive_io.dart';
-import 'package:ba_nav/mapdata/map_data.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:path/path.dart' as p;
 
