@@ -117,9 +117,15 @@ Future<bool> openMap(String path) async {
     return false;
   }
 
-  final appDir = await getApplicationDocumentsDirectory();
   final zipName = p.basenameWithoutExtension(path);
-  final targetDir = Directory(p.join(appDir.path, zipName));
+  Directory targetDir;
+  if (Platform.isAndroid || Platform.isIOS) {
+    final appDir = await getApplicationSupportDirectory();
+    targetDir = Directory(p.join(appDir.path, zipName));
+  } else {
+    targetDir = Directory(zipName);
+  }
+
   // Unzips file if the directory doesn't exist yet
   if (!targetDir.existsSync()) {
     final bytes = await zipFile.readAsBytes();
@@ -208,15 +214,3 @@ List<(String, int, String, String)> getAllNodes() {
 
   return output;
 }
-
-// TESTING CODE
-// void main() {
-//   openMap("University\ Campus_1.0.0").then((a) {
-//     if (a) {
-//       //tripFromFind(12, "Outside", segmentNumber)
-//       tripFromTo(12, 3, 3).then((value) {
-//         print(value);
-//       });
-//     }
-//   });
-// }
