@@ -48,21 +48,38 @@ fun testFloorReindexing(): Boolean {
     map.export("test_floor_reindex", false, null)
     println("\n✓ Exported map")
     
-    // Read the exported JSON from the directory and verify floor IDs
+    // Read the exported JSON from the ZIP archive and verify floor IDs
     val objectMapper = jacksonObjectMapper()
-    val exportDir = java.io.File("test_floor_reindex")
-    val file = java.io.File(exportDir, "test_floor_reindex.json")
+    val zipFile = java.io.File("test_floor_reindex.zip")
     
-    if (!file.exists()) {
-        println("✗ ERROR: Exported JSON file not found at ${file.absolutePath}")
+    if (!zipFile.exists()) {
+        println("✗ ERROR: Exported ZIP file not found at ${zipFile.absolutePath}")
         return false
     }
     
-    val jsonTree = objectMapper.readTree(file)
+    // Extract and read map.json from the ZIP
+    val jsonTree = java.util.zip.ZipFile(zipFile).use { zip ->
+        val jsonEntry = zip.entries().toList().find { it.name == "map.json" }
+            ?: throw Exception("map.json not found in ZIP archive")
+        
+        zip.getInputStream(jsonEntry).use { inputStream ->
+            objectMapper.readTree(inputStream)
+        }
+    }
+    
     val buildings = jsonTree.get("mapData").get("buildings")
     
-    // Check Building 1 floors
-    val building1Floors = buildings.get(0).get("floors")
+    // Verify Outside building is at index 0
+    val outsideBuildingName = buildings.get(0).get("name").asString()
+    if (outsideBuildingName != "Outside") {
+        println("✗ ERROR: First building should be 'Outside', found '$outsideBuildingName'")
+        zipFile.delete()
+        return false
+    }
+    println("\n✓ Outside building at index 0")
+    
+    // Check Building 1 floors (at index 1 since Outside is at 0)
+    val building1Floors = buildings.get(1).get("floors")
     println("\nBuilding 1 exported floor IDs:")
     for (i in 0 until building1Floors.size()) {
         val floorId = building1Floors.get(i).get("id").asInt()
@@ -71,13 +88,13 @@ fun testFloorReindexing(): Boolean {
         
         if (floorId != i) {
             println("✗ ERROR: Building 1 floor $i has ID $floorId, expected $i")
-            file.delete()
+            zipFile.delete()
             return false
         }
     }
     
-    // Check Building 2 floors
-    val building2Floors = buildings.get(1).get("floors")
+    // Check Building 2 floors (at index 2 since Outside is at 0)
+    val building2Floors = buildings.get(2).get("floors")
     println("\nBuilding 2 exported floor IDs:")
     for (i in 0 until building2Floors.size()) {
         val floorId = building2Floors.get(i).get("id").asInt()
@@ -86,14 +103,12 @@ fun testFloorReindexing(): Boolean {
         
         if (floorId != i) {
             println("✗ ERROR: Building 2 floor $i has ID $floorId, expected $i")
-            file.delete()
+            zipFile.delete()
             return false
         }
     }
     
     // Clean up test files
-    exportDir.deleteRecursively()
-    val zipFile = java.io.File("test_floor_reindex.zip")
     zipFile.delete()
     
     println("\n✓ All floor IDs correctly reindexed per building!")
@@ -106,18 +121,18 @@ fun testFloorReindexing(): Boolean {
 
 fun main() {
     println("\n╔════════════════════════════════════════════════╗")
-    println("║      FLOOR REINDEXING VERIFICATION TEST       ║")
+    println("║       FLOOR REINDEXING VERIFICATION TEST       ║")
     println("╚════════════════════════════════════════════════╝\n")
     
     val passed = testFloorReindexing()
     
     if (passed) {
         println("\n╔════════════════════════════════════════════════╗")
-        println("║          ✓ TEST PASSED! ✓                    ║")
+        println("║            ✓ TEST PASSED! ✓                    ║")
         println("╚════════════════════════════════════════════════╝\n")
     } else {
         println("\n╔════════════════════════════════════════════════╗")
-        println("║          ✗ TEST FAILED ✗                     ║")
+        println("║            ✗ TEST FAILED ✗                     ║")
         println("╚════════════════════════════════════════════════╝\n")
     }
 }

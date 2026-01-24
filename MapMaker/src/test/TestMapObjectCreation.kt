@@ -2,12 +2,165 @@ package mapmaker.test
 
 import mapmaker.mapdata.*
 
+fun testOutsideBuilding(): Boolean {
+    println("========== TESTING OUTSIDE BUILDING GUARANTEES ==========\n")
+    
+    // Test Case 1: Empty buildings list creates Outside building
+    val mapData1 = MapData("Test1", "1.0", categories = arrayListOf("Entrance"))
+    if (mapData1.buildings.size != 1) {
+        println("✗ TestOutsideBuilding: Expected 1 building (Outside), got ${mapData1.buildings.size}")
+        return false
+    }
+    if (mapData1.buildings[0].name != "Outside") {
+        println("✗ TestOutsideBuilding: First building should be 'Outside', got '${mapData1.buildings[0].name}'")
+        return false
+    }
+    if (mapData1.buildings[0].floors.size != 1) {
+        println("✗ TestOutsideBuilding: Outside building should have 1 floor, got ${mapData1.buildings[0].floors.size}")
+        return false
+    }
+    if (mapData1.buildings[0].floors[0].level != 0) {
+        println("✗ TestOutsideBuilding: Outside floor should be level 0, got ${mapData1.buildings[0].floors[0].level}")
+        return false
+    }
+    if (mapData1.buildings[0].floors[0].id != 0) {
+        println("✗ TestOutsideBuilding: Outside floor should have id 0, got ${mapData1.buildings[0].floors[0].id}")
+        return false
+    }
+    println("✓ TestOutsideBuilding: Empty buildings list correctly creates Outside building at index 0.")
+    
+    // Test Case 2: Buildings passed without Outside - Outside created first
+    val building1 = Building(name = "Building1", parentMap = mapData1)
+    building1.newFloor(0)
+    val building2 = Building(name = "Building2", parentMap = mapData1)
+    building2.newFloor(0)
+    
+    val mapData2 = MapData("Test2", "1.0", 
+        buildings = arrayListOf(building1, building2),
+        categories = arrayListOf("Entrance"))
+    
+    if (mapData2.buildings.size != 3) {
+        println("✗ TestOutsideBuilding: Expected 3 buildings (Outside + 2 passed), got ${mapData2.buildings.size}")
+        return false
+    }
+    if (mapData2.buildings[0].name != "Outside") {
+        println("✗ TestOutsideBuilding: First building should be 'Outside', got '${mapData2.buildings[0].name}'")
+        return false
+    }
+    if (mapData2.buildings[1].name != "Building1") {
+        println("✗ TestOutsideBuilding: Second building should be 'Building1', got '${mapData2.buildings[1].name}'")
+        return false
+    }
+    if (mapData2.buildings[2].name != "Building2") {
+        println("✗ TestOutsideBuilding: Third building should be 'Building2', got '${mapData2.buildings[2].name}'")
+        return false
+    }
+    println("✓ TestOutsideBuilding: Buildings without Outside correctly get Outside inserted first.")
+    
+    // Test Case 3: Buildings passed with Outside at wrong position - moved to first
+    val outsideBuilding = Building(name = "Outside", parentMap = mapData1)
+    val outsideFloor = Floor(level = 0, parentBuilding = outsideBuilding)
+    outsideFloor.id = 0
+    outsideBuilding.floors.add(outsideFloor)
+    
+    val building3 = Building(name = "Building3", parentMap = mapData1)
+    building3.newFloor(0)
+    
+    val mapData3 = MapData("Test3", "1.0",
+        buildings = arrayListOf(building3, outsideBuilding),
+        categories = arrayListOf("Entrance"))
+    
+    if (mapData3.buildings[0].name != "Outside") {
+        println("✗ TestOutsideBuilding: Outside should be moved to first position, got '${mapData3.buildings[0].name}' at index 0")
+        return false
+    }
+    if (mapData3.buildings[1].name != "Building3") {
+        println("✗ TestOutsideBuilding: Building3 should be at index 1, got '${mapData3.buildings[1].name}'")
+        return false
+    }
+    println("✓ TestOutsideBuilding: Outside building moved to first position when passed at wrong index.")
+    
+    // Test Case 4: Outside building with invalid format (multiple floors) should fail
+    val invalidOutside = Building(name = "Outside", parentMap = mapData1)
+    invalidOutside.newFloor(0)
+    invalidOutside.newFloor(1)
+    
+    try {
+        MapData("Test4", "1.0",
+            buildings = arrayListOf(invalidOutside),
+            categories = arrayListOf("Entrance"))
+        println("✗ TestOutsideBuilding: Should reject Outside building with multiple floors")
+        return false
+    } catch (e: Exception) {
+        if (!e.message!!.contains("must have exactly one floor")) {
+            println("✗ TestOutsideBuilding: Wrong error for invalid Outside: ${e.message}")
+            return false
+        }
+    }
+    println("✓ TestOutsideBuilding: Correctly rejected Outside building with multiple floors.")
+    
+    // Test Case 5: Outside building with wrong floor level should fail
+    val invalidOutside2 = Building(name = "Outside", parentMap = mapData1)
+    invalidOutside2.newFloor(1)
+    
+    try {
+        MapData("Test5", "1.0",
+            buildings = arrayListOf(invalidOutside2),
+            categories = arrayListOf("Entrance"))
+        println("✗ TestOutsideBuilding: Should reject Outside building with floor level != 0")
+        return false
+    } catch (e: Exception) {
+        if (!e.message!!.contains("must be at level 0")) {
+            println("✗ TestOutsideBuilding: Wrong error for invalid Outside floor level: ${e.message}")
+            return false
+        }
+    }
+    println("✓ TestOutsideBuilding: Correctly rejected Outside building with floor level != 0.")
+    
+    // Test: Cannot create building named "Outside"
+    val mapData = MapData("Test", "1.0", categories = arrayListOf("Entrance"))
+    try {
+        mapData.newBuilding("Outside")
+        println("✗ TestOutsideBuilding: Should not allow creating building named 'Outside'")
+        return false
+    } catch (e: Exception) {
+        if (!e.message!!.contains("reserved")) {
+            println("✗ TestOutsideBuilding: Wrong error for creating 'Outside' building: ${e.message}")
+            return false
+        }
+    }
+    println("✓ TestOutsideBuilding: Correctly prevented creating building named 'Outside'.")
+    
+    // Test: Cannot delete Outside building
+    try {
+        mapData.delBuilding("Outside")
+        println("✗ TestOutsideBuilding: Should not allow deleting Outside building")
+        return false
+    } catch (e: Exception) {
+        if (!e.message!!.contains("Cannot delete")) {
+            println("✗ TestOutsideBuilding: Wrong error for deleting Outside: ${e.message}")
+            return false
+        }
+    }
+    println("✓ TestOutsideBuilding: Correctly prevented deleting Outside building.")
+    
+    println("\n========== ALL OUTSIDE BUILDING TESTS PASSED ==========\n")
+    return true
+}
+
 fun testMapData(): Boolean {
     println("========== TESTING MAPDATA CLASS ==========\n")
     
     // Create MapData
     val mapData = MapData("AGH", "0.0.1", categories = arrayListOf("Entrance", "Exit", "Room"))
     println("✓ TestMapData: Successfully created MapData object.")
+    
+    // Verify Outside building exists
+    if (mapData.buildings.size < 1 || mapData.buildings[0].name != "Outside") {
+        println("✗ TestMapData: Outside building should exist and be first")
+        return false
+    }
+    println("✓ TestMapData: Outside building exists at index 0.")
 
     // Test empty building name
     try {
@@ -178,10 +331,11 @@ fun testMapData(): Boolean {
     
     // Test getNodes and getEdges
     mapData.newBuilding("B1")
-    mapData.buildings[0].newFloor(0)
-    mapData.buildings[0].floors[0].addNode("N1", 0, 0, 0)
-    mapData.buildings[0].floors[0].addNode("N2", 1, 1, 1)
-    mapData.buildings[0].floors[0].addEdge("N1", "N2")
+    val b1 = mapData.buildings.find { it.name == "B1" }!!
+    b1.newFloor(0)
+    b1.floors[0].addNode("N1", 0, 0, 0)
+    b1.floors[0].addNode("N2", 1, 1, 1)
+    b1.floors[0].addEdge("N1", "N2")
     
     val allNodes = mapData.getNodes()
     if (allNodes.size != 3) { // 2 floor nodes + 1 external node remaining
@@ -505,11 +659,12 @@ fun testEdge(): Boolean {
 
 fun main() {
     println("\n╔════════════════════════════════════════════════╗")
-    println("║  COMPREHENSIVE MAP OBJECT CREATION TESTS      ║")
+    println("║  COMPREHENSIVE MAP OBJECT CREATION TESTS       ║")
     println("╚════════════════════════════════════════════════╝\n")
     
     var allPassed = true
     
+    allPassed = testOutsideBuilding() && allPassed
     allPassed = testMapData() && allPassed
     allPassed = testBuilding() && allPassed
     allPassed = testFloor() && allPassed
@@ -518,11 +673,11 @@ fun main() {
     
     if (allPassed) {
         println("\n╔════════════════════════════════════════════════╗")
-        println("║          ✓ ALL TESTS PASSED! ✓               ║")
+        println("║          ✓ ALL TESTS PASSED! ✓                 ║")
         println("╚════════════════════════════════════════════════╝\n")
     } else {
         println("\n╔════════════════════════════════════════════════╗")
-        println("║          ✗ SOME TESTS FAILED ✗               ║")
+        println("║          ✗ SOME TESTS FAILED ✗                 ║")
         println("╚════════════════════════════════════════════════╝\n")
     }
 }

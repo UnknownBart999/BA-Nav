@@ -78,12 +78,85 @@ internal fun validateFloorPlanPath(path: String) {
 class MapData(
     override var name: String = "", override var version: String = "",
     override val buildings: ArrayList<Building> = ArrayList(),
-    override val externalNodes: ArrayList<Node> = ArrayList(),
-    override val externalEdges: ArrayList<Edge> = ArrayList(),
     override var categories: ArrayList<String> = ArrayList()
 ) : IMapData {
+    
+    init {
+        val existingOutside = buildings.find { it.name == "Outside" }
+        
+        if (existingOutside == null) {
+            // Case 1 & 2: No Outside building exists
+            if (buildings.isEmpty()) {
+                // Case 1: No buildings passed - create default Outside building
+                val outsideBuilding = Building(name = "Outside", parentMap = this)
+                buildings.add(outsideBuilding)
+                
+                // Create floor 0 with id 0 for the Outside building
+                val outsideFloor = Floor(level = 0, parentBuilding = outsideBuilding)
+                outsideFloor.id = 0
+                outsideBuilding.floors.add(outsideFloor)
+            } else {
+                // Case 2: Buildings passed but no Outside - create Outside as first building
+                val otherBuildings = ArrayList(buildings)
+                buildings.clear()
+                
+                // Create and add Outside building first
+                val outsideBuilding = Building(name = "Outside", parentMap = this)
+                val outsideFloor = Floor(level = 0, parentBuilding = outsideBuilding)
+                outsideFloor.id = 0
+                outsideBuilding.floors.add(outsideFloor)
+                buildings.add(outsideBuilding)
+                
+                // Add other buildings after Outside
+                buildings.addAll(otherBuildings)
+            }
+        } else {
+            // Case 3: Outside building exists - ensure it's first and verify format
+            
+            // Validate Outside building has exactly one floor at level 0
+            if (existingOutside.floors.size != 1) {
+                throw Exception("Outside building must have exactly one floor, found ${existingOutside.floors.size} floors!")
+            }
+            
+            val outsideFloor = existingOutside.floors[0]
+            if (outsideFloor.level != 0) {
+                throw Exception("Outside building floor must be at level 0, found level ${outsideFloor.level}!")
+            }
+            
+            // Ensure floor has id 0
+            outsideFloor.id = 0
+            
+            // Ensure Outside building is first in the list
+            if (buildings[0] != existingOutside) {
+                buildings.remove(existingOutside)
+                buildings.add(0, existingOutside)
+            }
+        }
+    }
+    
+    /**
+     * Helper function to get the Outside building.
+     * Outside building is guaranteed to always be the first building (index 0).
+     * 
+     * @return Reference to the Outside building.
+     */
+    private fun getOutsideBuilding(): Building {
+        return buildings[0]
+    }
+    
+    /**
+     * Helper function to get floor 0 of the Outside building.
+     * Outside building is guaranteed to have exactly one floor at index 0.
+     * 
+     * @return Reference to floor 0 of the Outside building.
+     */
+    private fun getOutsideFloor(): Floor {
+        return buildings[0].floors[0]
+    }
+    
     /**
      * Creates a new Building with name [name] and adds it to Maps's building list.
+     * The name "Outside" is reserved and cannot be used.
      *
      * @return Reference to the new Building object.
      */
@@ -92,6 +165,11 @@ class MapData(
         // Check if name is empty
         if (name.isBlank()) {
             throw Exception("Building name cannot be empty!")
+        }
+        
+        // Check if name is the reserved "Outside"
+        if (name == "Outside") {
+            throw Exception("Building name 'Outside' is reserved for external nodes and cannot be used!")
         }
 
         // Check if building name already exists
@@ -110,10 +188,16 @@ class MapData(
 
     /**
      * Attempts to find a building with name [name] and remove it from the Map's building list.
+     * The "Outside" building cannot be deleted as it is required for external nodes.
      *
      * @return true or false on whether the building was removed successfully.
      */
     override fun delBuilding(name: String): Boolean {
+        
+        // Prevent deletion of the Outside building
+        if (name == "Outside") {
+            throw Exception("Cannot delete the 'Outside' building. It is required for external nodes and edges.")
+        }
 
         for (building in this.buildings) {
             if (building.name == name) {
@@ -378,7 +462,8 @@ class MapData(
         }
         
         // Export JSON to the directory
-        val jsonFileName = "${directoryName}.json"
+        // JSON file is always named "map.json" for compatibility with parser
+        val jsonFileName = "map.json"
         val jsonFilePath = File(exportDirectory, jsonFileName).absolutePath
         val jsonExport = mapmaker.jsonexport.JSONExport(reindexedData)
         jsonExport.exportToPath(jsonFilePath)
@@ -478,37 +563,33 @@ class MapData(
             oldToNewEdgeId[edge.id] = index
         }
         
-        // Reindex floors per building (each building's floors start at 0)
-        for (building in this.buildings) {
+        // Reindex floors per building
+        // Outside building (buildings[0]) always has exactly one floor with id 0
+        oldToNewFloorId[this.buildings[0].floors[0].id] = 0
+        
+        // Reindex other buildings' floors sequentially starting from 0
+        for (buildingIndex in 1 until this.buildings.size) {
+            val building = this.buildings[buildingIndex]
             val buildingFloors = building.floors.sortedBy { it.level }
             buildingFloors.forEachIndexed { index, floor ->
                 oldToNewFloorId[floor.id] = index
             }
         }
         
-        // Create new MapData with reindexed data
+        // Create new MapData with empty buildings list
+        // Init will create the Outside building automatically, which we then clear and rebuild
         val newMap = MapData(
             name = this.name,
             version = this.version,
             categories = ArrayList(this.categories)
         )
         
-        // Create reindexed external nodes
-        val externalNodeMap = mutableMapOf<Int, Node>()
-        for (node in this.externalNodes) {
-            val newId = oldToNewNodeId[node.id]!!
-            val newNode = Node(
-                name = node.name,
-                coords = node.coords,
-                cat = node.cat,
-                additionalInfo = node.additionalInfo
-            )
-            newNode.id = newId
-            newMap.externalNodes.add(newNode)
-            externalNodeMap[node.id] = newNode
-        }
+        // Clear the auto-created Outside building so we can rebuild all buildings with proper IDs
+        newMap.buildings.clear()
         
         // Create reindexed buildings and their contents
+        val nodeMap = mutableMapOf<Int, Node>()
+        
         for (building in this.buildings) {
             val newBuilding = Building(
                 name = building.name,
@@ -540,7 +621,7 @@ class MapData(
                     )
                     newNode.id = newId
                     newFloor.nodes.add(newNode)
-                    externalNodeMap[node.id] = newNode
+                    nodeMap[node.id] = newNode
                 }
             }
         }
@@ -548,40 +629,21 @@ class MapData(
         // Create reindexed edges
         val processedEdges = mutableSetOf<Int>()
         
-        // Process external edges
-        for (edge in this.externalEdges) {
-            if (edge.id in processedEdges) continue
-            processedEdges.add(edge.id)
+        // Process all building floor edges (including Outside building)
+        // Buildings and floors are created in the same order, so we can use indices
+        for ((buildingIndex, building) in this.buildings.withIndex()) {
+            val newBuilding = newMap.buildings[buildingIndex]
             
-            val newId = oldToNewEdgeId[edge.id]!!
-            val newNode1 = externalNodeMap[edge.nodes.first.id]!!
-            val newNode2 = externalNodeMap[edge.nodes.second.id]!!
-            
-            val newEdge = Edge(
-                nodes = Pair(newNode1, newNode2),
-                dist = edge.dist,
-                additionalInfo = edge.additionalInfo
-            )
-            newEdge.id = newId
-            newMap.externalEdges.add(newEdge)
-            newNode1.edges.add(newEdge)
-            newNode2.edges.add(newEdge)
-        }
-        
-        // Process building floor edges
-        for (building in this.buildings) {
-            val newBuilding = newMap.buildings.find { it.name == building.name }!!
-            
-            for (floor in building.floors) {
-                val newFloor = newBuilding.floors.find { it.level == floor.level }!!
+            for ((floorIndex, floor) in building.floors.withIndex()) {
+                val newFloor = newBuilding.floors[floorIndex]
                 
                 for (edge in floor.edges) {
                     if (edge.id in processedEdges) continue
                     processedEdges.add(edge.id)
                     
                     val newId = oldToNewEdgeId[edge.id]!!
-                    val newNode1 = externalNodeMap[edge.nodes.first.id]!!
-                    val newNode2 = externalNodeMap[edge.nodes.second.id]!!
+                    val newNode1 = nodeMap[edge.nodes.first.id]!!
+                    val newNode2 = nodeMap[edge.nodes.second.id]!!
                     
                     val newEdge = Edge(
                         nodes = Pair(newNode1, newNode2),
@@ -601,6 +663,7 @@ class MapData(
 
     /**
      * Helper function for export. Gets the nodes present in the map in a single ArrayList.
+     * Includes nodes from all buildings including the "Outside" building.
      */
     override fun getNodes(): ArrayList<Node> {
         val nodesList = ArrayList<Node>()
@@ -611,13 +674,12 @@ class MapData(
             }
         }
 
-        nodesList.addAll(this.externalNodes)
-
         return nodesList
     }
 
     /**
      * Helper function for export. Gets the edges present in the map in a single ArrayList.
+     * Includes edges from all buildings including the "Outside" building.
      */
     override fun getEdges(): ArrayList<Edge> {
         val edgesList = ArrayList<Edge>()
@@ -628,140 +690,50 @@ class MapData(
             }
         }
 
-        edgesList.addAll(this.externalEdges)
-
         return edgesList
     }
 
     /**
      * Creates a new external node in this map using [name], [x], [y], and [cat].
+     * External nodes are stored in the "Outside" building on floor 0.
      * [x] and [y] are the x-y coordinates that the node has.
      * [cat] is the category number for this node. This is useful to differentiate between entrances, exits, rooms, elevators, etc.
      *
      * @return Reference to the newly created Node.
      */
     fun addExternalNode(name: String, x: Int, y: Int, cat: Int): Node {
-        // Check if name is empty
-        if (name.isBlank()) {
-            throw Exception("Node name cannot be empty!")
-        }
-        
-        // Check if external node name already exists
-        for (node in this.externalNodes) {
-            if (node.name == name) {
-                throw Exception("External node with name \"${name}\" already exists!")
-            }
-        }
-        
-        // Validate category index
-        if (cat < 0 || cat >= this.categories.size) {
-            throw Exception("Invalid category index: $cat. Must be between 0 and ${this.categories.size - 1}.")
-        }
-
-        val node = Node(name = name, coords = Pair(x, y), cat = cat)
-        this.externalNodes.add(node)
-        return node
+        val outsideFloor = getOutsideFloor()
+        return outsideFloor.addNode(name, x, y, cat)
     }
 
     /**
-     * Attempts to delete the node from the external map using [name].
+     * Attempts to delete the node from the external map (Outside building floor 0) using [name].
      *
      * @return true or false on whether the node was removed successfully.
      */
     fun delExternalNode(name: String): Boolean {
-
-        for (node in this.externalNodes) {
-            if (node.name == name) {
-                // Remove all edges connected to this node
-                val edgesToRemove = ArrayList<Edge>()
-                for (edge in this.externalEdges) {
-                    if ((edge.nodes.first == node) or (edge.nodes.second == node)) {
-                        edgesToRemove.add(edge)
-                    }
-                }
-                
-                for (edge in edgesToRemove) {
-                    this.externalEdges.remove(edge)
-                    // Remove edge from the other node
-                    if (edge.nodes.first == node) {
-                        edge.nodes.second.delEdge(edge)
-                    } else {
-                        edge.nodes.first.delEdge(edge)
-                    }
-                }
-
-                this.externalNodes.remove(node)
-                return true
-            }
-        }
-        return false
-
+        val outsideFloor = getOutsideFloor()
+        return outsideFloor.delNode(name)
     }
 
     /**
-     * Creates a new Edge between two external nodes using [nodeName1] and [nodeName2].
+     * Creates a new Edge between two external nodes (in Outside building floor 0) using [nodeName1] and [nodeName2].
      *
      * @return Reference to the newly created edge.
      */
     fun addExternalEdge(nodeName1: String, nodeName2: String): Edge {
-
-        // Check if edge already exists
-        for (edge in this.externalEdges) {
-            if ((edge.nodes.first.name == nodeName1) and (edge.nodes.second.name == nodeName2)) {
-                throw Exception("Edge already exists in external edges!")
-            } else if ((edge.nodes.first.name == nodeName2) and (edge.nodes.second.name == nodeName1)) {
-                throw Exception("Edge already exists in external edges!")
-            }
-        }
-
-        // Check if nodes exist
-        var node1: Node? = null
-        var node2: Node? = null
-        for (node in this.externalNodes) {
-            if ((node1 != null) and (node2 != null)) {
-                break
-            }
-
-            if (node.name == nodeName1) {
-                node1 = node
-            } else if (node.name == nodeName2) {
-                node2 = node
-            }
-        }
-
-        if ((node1 == null) or (node2 == null)) {
-            throw Exception("One of the passed Nodes is not present in external nodes: (" + node1?.name + "," + node2?.name + ")")
-        }
-
-        val edge = Edge(nodes = Pair(node1 as Node, node2 as Node))
-        this.externalEdges.add(edge)
-
-        node1.addEdge(edge)
-        node2.addEdge(edge)
-
-        return edge
+        val outsideFloor = getOutsideFloor()
+        return outsideFloor.addEdge(nodeName1, nodeName2)
     }
 
     /**
-     * Attempts to delete the edge between external nodes [nodeName1] and [nodeName2].
+     * Attempts to delete the edge between external nodes (in Outside building floor 0) [nodeName1] and [nodeName2].
      *
      * @return true or false on whether the edge was removed successfully.
      */
     fun delExternalEdge(nodeName1: String, nodeName2: String): Boolean {
-        for (edge in this.externalEdges) {
-            if ((edge.nodes.first.name == nodeName1) and (edge.nodes.second.name == nodeName2)) {
-                edge.nodes.first.delEdge(edge)
-                edge.nodes.second.delEdge(edge)
-                this.externalEdges.remove(edge)
-                return true
-            } else if ((edge.nodes.first.name == nodeName2) and (edge.nodes.second.name == nodeName1)) {
-                edge.nodes.first.delEdge(edge)
-                edge.nodes.second.delEdge(edge)
-                this.externalEdges.remove(edge)
-                return true
-            }
-        }
-        return false
+        val outsideFloor = getOutsideFloor()
+        return outsideFloor.delEdge(nodeName1, nodeName2)
     }
 }
 
@@ -1032,7 +1004,7 @@ class Floor(
     /**
      * Creates a new Edge using [intNodeName] and [extNode].
      * [intNodeName] is the String name of the node in this floor's node array.
-     * [extNode] is the external node to connect to.
+     * [extNode] is a node from another floor/building to connect to (typically from Outside building floor 0).
      *
      * @return Reference to the newly created edge.
      */
