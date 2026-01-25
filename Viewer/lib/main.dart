@@ -1,9 +1,14 @@
 //import 'dart:nativewrappers/_internal/vm/lib/ffi_patch.dart';
 
 import 'package:flutter/material.dart';
+import 'package:ba_nav/backend_api.dart';
 
 void main() {
-  runApp(const ENSYC());
+  openMap("C:\\Users\\troja\\Documents\\Uni\\BA-Nav\\Viewer\\lib\\City\ Hospital_2.1.0.zip").then((value) {
+    if (value) {
+      runApp(const ENSYC());
+    }
+  });
 }
 
 class ENSYC extends StatelessWidget {
@@ -526,8 +531,10 @@ class _NavigationPageState extends State<NavigationPage> {
   late int totalSections;
   late String buildingName;
   late int floor;
-  late Image stepImage;
+  late Image? stepImage;
   late List<(int, int)> coordinates;
+
+  bool _isLoading = true;
 
   @override
   void initState() {
@@ -536,13 +543,16 @@ class _NavigationPageState extends State<NavigationPage> {
     _loadSection();
   }
 
-  void _loadSection() {
+  void _loadSection() async {
+    _isLoading = true;
     late dynamic tripData;
+    unloadTrip();
     if (widget.toLocationOrCategory is String) {
-      tripData = tripFromFind(widget.fromLocationId, widget.toLocationOrCategory as String, currentSection);
+      tripData = await tripFromFind(widget.fromLocationId, widget.toLocationOrCategory as String, currentSection);
     } else {
-      tripData = tripFromTo(widget.fromLocationId, widget.toLocationOrCategory as int, currentSection);
+      tripData = await tripFromTo(widget.fromLocationId, widget.toLocationOrCategory as int, currentSection);
     }
+    _isLoading = false;
     setState(() {
       totalSections = tripData.$1;
       buildingName = tripData.$2;
@@ -572,6 +582,9 @@ class _NavigationPageState extends State<NavigationPage> {
 
   @override
   Widget build(BuildContext context) {
+    if (_isLoading) {
+      return const Center(child: CircularProgressIndicator());
+    }
     return Scaffold(
       body: Column(
         children: [
@@ -591,7 +604,7 @@ class _NavigationPageState extends State<NavigationPage> {
               padding: const EdgeInsets.all(16),
               child: Stack(
                 children: [
-                  stepImage,
+                  stepImage ?? SizedBox.shrink(),
                   CustomPaint(
                     painter: LinesPainter(coordinates: coordinates),
                     size: Size.infinite,
@@ -681,41 +694,4 @@ class LinesPainter extends CustomPainter {
   }
 }
 
-// DUMMY FUNCTIONS
-
-List<String> getBuildingNames(){
-  return ["Campus", "Building D10"];
-}
-List<String> getCategories(){
-  return ["Room", "Toilet", "Shop", "Other"];
-}
-List<(int, String, String)> getLocationsInBuilding(String building_name){
-  if (building_name=="Campus"){
-    return [(0, "Miasteczko", "Other"), (1, "Studenciak", "Shop")];
-  }
-  else if (building_name=="Building D10"){
-    return [(2, "Room 010", "Room"), (3, "Room 011", "Toilet")];
-  }
-  else {return [];}
-}
-
-void newTrip(){}
-
-(int, String, int, Image, List<(int, int)>) tripFromTo(int fromNodeId, int toNodeId, int section){
-  print(fromNodeId);
-  print(toNodeId);
-  print(section);
-  if (section == 0) return (2, "BuildingNameHere", 1, Image.network('https://picsum.photos/250?image=0'), [(0, 3), (4, 9), (6, 10)]);
-  else if (section == 1) return (2, "BuildingNameHere", 0, Image.network('https://picsum.photos/250?image=1'), [(3, 43), (33, 22), (12, 12)]);
-  else return (0, "", 0, Image.network('https://picsum.photos/250?image=9'), []);
-}
-
-(int, String, int, Image, List<(int, int)>) tripFromFind(int fromNodeId, String category, int section){
-  print(fromNodeId);
-  print(category);
-  print(section);
-  if (section == 0) return (2, "BuildingNameHere", 1, Image.network('https://picsum.photos/250?image=0'), [(0, 3), (4, 9), (6, 10)]);
-  else if (section == 1) return (2, "BuildingNameHere", 0, Image.network('https://picsum.photos/250?image=1'), [(3, 43), (33, 22), (12, 12)]);
-  else return (0, "", 0, Image.network('https://picsum.photos/250?image=9'), []);
-}
 

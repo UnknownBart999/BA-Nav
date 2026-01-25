@@ -12,7 +12,7 @@ import 'package:ba_nav/path/ucs.dart';
 
 import 'parser/jparser.dart';
 import 'path/trip.dart';
-import 'package:image/image.dart' as img;
+import 'package:flutter/src/widgets/image.dart' as img;
 
 typedef FloorPlan = img.Image;
 
@@ -21,14 +21,14 @@ typedef FloorPlan = img.Image;
 IMapData? _defaultMap;
 String _defaultMapPath = "";
 Trip? _defaultTrip;
-FloorPlan _defaultFloorPlan = FloorPlan.empty();
+FloorPlan? _defaultFloorPlan;
 
 // ----- Public global variables. ------------------------------------------------------------------------------------------
 
 IMapData? loadedMap = _defaultMap;
 String loadedMapPath = _defaultMapPath;
 Trip? loadedTrip = _defaultTrip;
-FloorPlan loadedFloorPlan = _defaultFloorPlan;
+FloorPlan? loadedFloorPlan = _defaultFloorPlan;
 
 // ----- Public utility functions. -----------------------------------------------------------------------------------------
 
@@ -43,9 +43,6 @@ void unloadMap() {
 
 void unloadTrip() {
   loadedTrip = _defaultTrip;
-}
-
-void unloadFloorPlan() {
   loadedFloorPlan = _defaultFloorPlan;
 }
 
@@ -55,7 +52,7 @@ void unloadFloorPlan() {
 ///
 /// Use [segmentNumber] to specify which segment to return.
 /// Format: (total segs, BN, fn, FP, coords list)
-Future<(int, String, int, img.Image, List<(int, int)>)> tripFromTo(
+Future<(int, String, int, img.Image?, List<(int, int)>)> tripFromTo(
   int nid1,
   int nid2,
   int segmentNumber
@@ -63,6 +60,7 @@ Future<(int, String, int, img.Image, List<(int, int)>)> tripFromTo(
   // If current trip is null -> make new trip
   if (loadedTrip == _defaultTrip) {
     loadedTrip = loadedMap != _defaultMap ? astar(nid1, nid2, loadedMap!) : null;
+    print(loadedTrip);
   }
   return _getSegment(segmentNumber);
 }
@@ -71,7 +69,7 @@ Future<(int, String, int, img.Image, List<(int, int)>)> tripFromTo(
 ///
 /// Use [segmentNumber] to specify which segment to return.
 /// Format: (total segs, BN, fn, FP, coords list)
-Future<(int, String, int, img.Image, List<(int, int)>)> tripFromFind(
+Future<(int, String, int, img.Image?, List<(int, int)>)> tripFromFind(
   int nid1,
   String cat,
   int segmentNumber
@@ -82,7 +80,7 @@ Future<(int, String, int, img.Image, List<(int, int)>)> tripFromFind(
   return _getSegment(segmentNumber);
 }
 
-Future<(int, String, int, img.Image, List<(int, int)>)> _getSegment(int segNum) async {
+Future<(int, String, int, img.Image?, List<(int, int)>)> _getSegment(int segNum) async {
   if (loadedTrip == _defaultTrip || segNum < 0 || segNum >= loadedTrip!.segments.length) {
     return (0, "", 0, _defaultFloorPlan, <(int, int)>[]);
   }
@@ -100,7 +98,7 @@ Future<(int, String, int, img.Image, List<(int, int)>)> _getSegment(int segNum) 
   loadedFloorPlan = _defaultFloorPlan;
   final file = File("$loadedMapPath/${floor.getFloorPlanPath()}");
   if (file.existsSync()) {
-    loadedFloorPlan = img.decodeImage(await file.readAsBytes()) ?? _defaultFloorPlan;
+    loadedFloorPlan = img.Image.file(file);
   }
 
   return (loadedTrip!.totalSegments, buildingName, floorLevel, loadedFloorPlan, coordsList);
@@ -159,8 +157,8 @@ Future<bool> openMap(String path) async {
 }
 
 // Gets the building names in the loaded Map.
-Iterable<String> getBuildingNames() {
-  return loadedMap?.getBuildings().keys ?? Iterable.empty();
+List<String> getBuildingNames() {
+  return loadedMap?.getBuildings().keys.toList() ?? [];
 }
 
 // Get list of available actegories in the map.
@@ -173,7 +171,7 @@ List<String> getCategories() {
 /// Get all nodes in a selected building.
 ///
 /// Format [(floor number, node name, category), ...]
-List<(int, String, String)> getNodesInBuilding(String buildingName) {
+List<(int, String, String)> getLocationsInBuilding(String buildingName) {
   // If building name not in buildings, return empty list.
   IBuilding? selectedBuilding = loadedMap?.getBuildings()[buildingName];
   if (selectedBuilding == null) {
@@ -182,7 +180,7 @@ List<(int, String, String)> getNodesInBuilding(String buildingName) {
 
   List<(int, String, String)> output = [];
 
-  // Get nodes in format [(floor num, node name, category id), ...]
+  // Get nodes in format [(node id, node name, category id), ...]
   List<(int, String, int)> obtainedNodes = selectedBuilding.getNodeIds(
     loadedMap!.getNodes()
   );

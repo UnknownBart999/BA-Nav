@@ -86,7 +86,7 @@ class Building extends IBuilding {
       INode node = nodes.elementAt(nid);
 
       if (cat == null || node.getCategory() == cat) {
-        mappedNids.add((node.getFloorId(), node.getName(), node.getCategory()));
+        mappedNids.add((nid, node.getName(), node.getCategory()));
       }
     }
 
