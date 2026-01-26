@@ -1,18 +1,94 @@
-//import 'dart:nativewrappers/_internal/vm/lib/ffi_patch.dart';
-
 import 'package:flutter/material.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'package:file_picker/file_picker.dart';
+import 'package:flutter/scheduler.dart';
+import 'dart:io';
 import 'package:ba_nav/backend_api.dart';
 
 void main() {
-  openMap("C:\\Users\\troja\\Documents\\Uni\\BA-Nav\\Viewer\\lib\\City\ Hospital_2.1.0.zip").then((value) {
-    if (value) {
-      runApp(const ENSYC());
-    }
-  });
+  runApp(const ENSYC());
 }
 
-class ENSYC extends StatelessWidget {
+class ENSYC extends StatefulWidget {
   const ENSYC({super.key});
+  @override
+  State<ENSYC> createState() => _ENSYCState();
+}
+
+class _ENSYCState extends State<ENSYC> {
+  String? mapFilePath;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadMapFile();
+  }
+
+  Future<void> _loadMapFile() async {
+    final prefs = await SharedPreferences.getInstance();
+    final savedPath = prefs.getString('mapFilePath');
+    if (savedPath != null && savedPath.isNotEmpty) {
+      final isValid = await _validateMapFile(savedPath);
+      if (isValid) {
+        final worked = await openMap(savedPath);
+        setState(() {
+          mapFilePath = worked ? savedPath : null;
+        });
+      } else {
+        // Invalid map file, clear it
+        await prefs.remove('mapFilePath');
+        _showInvalidMapFileDialog();
+      }
+    }
+  }
+
+  Future<bool> _validateMapFile(String filePath) async {
+    try {
+      final file = File(filePath);
+      return await file.exists();
+    } catch (e) {
+      return false;
+    }
+  }
+
+  void _showInvalidMapFileDialog() {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Invalid Map File'),
+        content: const Text('The previously loaded map file is no longer valid. Please select a new one.'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('OK'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _openMapFile() async {
+    final result = await FilePicker.platform.pickFiles(
+      type: FileType.any,
+      allowMultiple: false,
+    );
+
+    if (result != null && result.files.isNotEmpty) {
+      final filePath = result.files.single.path;
+      if (filePath != null) {
+        final isValid = await _validateMapFile(filePath);
+        if (isValid) {
+          final prefs = await SharedPreferences.getInstance();
+          final worked = await openMap(filePath);
+          await prefs.setString('mapFilePath', filePath);
+          setState(() {
+            mapFilePath = worked ? filePath : null;
+          });
+        }
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
@@ -20,9 +96,9 @@ class ENSYC extends StatelessWidget {
       theme: ThemeData(
         colorScheme: ColorScheme.fromSeed(seedColor: const Color.fromARGB(255, 58, 154, 183), brightness: Brightness.dark),
       ),
-      home: const TripPage(title: 'Trip'),
+      home: TripPage(title: 'Trip', mapFilePath: mapFilePath, onOpenMapFile: _openMapFile),
       routes: {
-        '/menu': (context) => const MenuPage(),
+        '/menu': (context) => MenuPage(onOpenMapFile: _openMapFile, mapFilePath: mapFilePath),
         '/location-select': (context) {
           final selectedFrom = ModalRoute.of(context)?.settings.arguments as String?;
           return LocationSelectPage(selectedBuilding: selectedFrom);
@@ -41,8 +117,10 @@ class ENSYC extends StatelessWidget {
 }
 
 class TripPage extends StatefulWidget {
-  const TripPage({super.key, required this.title});
+  const TripPage({super.key, required this.title, this.mapFilePath, this.onOpenMapFile});
   final String title;
+  final String? mapFilePath;
+  final Future<void> Function()? onOpenMapFile;
   @override
   State<TripPage> createState() => _TripPageState();
 }
@@ -58,15 +136,58 @@ class _TripPageState extends State<TripPage> {
   bool isUsingFind = false;
   List<DropdownMenuItem<String>> dropDownItems=[];
   List<DropdownMenuItem<String>> categoryItems=[];
-  _TripPageState(){
-    List<String> building_names=getBuildingNames();
-    selectedFromBuilding = building_names[0];
-    selectedToBuilding = building_names[0];
-    for(int i=0; i<building_names.length; ++i){dropDownItems.add(DropdownMenuItem(value: building_names[i], child: Text(building_names[i])));}
-    List<String> categories = getCategories();
-    selectedCategory = categories[0];
-    for(int i=0; i<categories.length; ++i){categoryItems.add(DropdownMenuItem(value: categories[i], child: Text(categories[i])));}
+  String? _previousMapFilePath;
+  
+  // _TripPageState(){
+  //   List<String> building_names=getBuildingNames();
+  //   selectedFromBuilding = building_names[0];
+  //   selectedToBuilding = building_names[0];
+  //   for(int i=0; i<building_names.length; ++i){dropDownItems.add(DropdownMenuItem(value: building_names[i], child: Text(building_names[i])));}
+  //   List<String> categories = getCategories();
+  //   selectedCategory = categories[0];
+  //   for(int i=0; i<categories.length; ++i){categoryItems.add(DropdownMenuItem(value: categories[i], child: Text(categories[i])));}
+  // }
+
+  @override
+  void initState() {
+    super.initState();
+    if (widget.mapFilePath != null) {
+      List<String> building_names=getBuildingNames();
+      selectedFromBuilding = building_names[0];
+      selectedToBuilding = building_names[0];
+      dropDownItems.clear();
+      categoryItems.clear();
+      for(int i=0; i<building_names.length; ++i){dropDownItems.add(DropdownMenuItem(value: building_names[i], child: Text(building_names[i])));}
+      List<String> categories = getCategories();
+      selectedCategory = categories[0];
+      for(int i=0; i<categories.length; ++i){categoryItems.add(DropdownMenuItem(value: categories[i], child: Text(categories[i])));}
+      setState(() {});
+    }
   }
+
+  @override
+  void didUpdateWidget(TripPage oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (widget.mapFilePath != _previousMapFilePath && widget.mapFilePath != null) {
+      _previousMapFilePath = widget.mapFilePath;
+      SchedulerBinding.instance.addPostFrameCallback((_) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Map file loaded successfully')),
+        );
+        List<String> building_names=getBuildingNames();
+        selectedFromBuilding = building_names[0];
+        selectedToBuilding = building_names[0];
+        dropDownItems.clear();
+        categoryItems.clear();
+        for(int i=0; i<building_names.length; ++i){dropDownItems.add(DropdownMenuItem(value: building_names[i], child: Text(building_names[i])));}
+        List<String> categories = getCategories();
+        selectedCategory = categories[0];
+        for(int i=0; i<categories.length; ++i){categoryItems.add(DropdownMenuItem(value: categories[i], child: Text(categories[i])));}
+        setState(() {});
+      });
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -364,7 +485,10 @@ class _LocationSelectPageState extends State<LocationSelectPage> {
 }
 
 class MenuPage extends StatelessWidget {
-  const MenuPage({super.key});
+  const MenuPage({super.key, this.onOpenMapFile, this.mapFilePath});
+  final Future<void> Function()? onOpenMapFile;
+  final String? mapFilePath;
+  
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -383,6 +507,12 @@ class MenuPage extends StatelessWidget {
             child: ListView(
               padding: const EdgeInsets.all(16),
               children: [
+                ListTile(
+                  leading: const Icon(Icons.map),
+                  title: const Text('Open map file'),
+                  subtitle: mapFilePath != null ? Text(mapFilePath ?? '', maxLines: 1, overflow: TextOverflow.ellipsis) : const Text('No map file loaded'),
+                  onTap: onOpenMapFile,
+                ),
                 ExpansionTile(
                   title: const Text('About us'),
                   children: [
@@ -676,15 +806,22 @@ class LinesPainter extends CustomPainter {
       ..color = Colors.red
       ..strokeWidth = 2.0;
 
-    for (int i = 0; i < coordinates.length - 1; i++) {
-      final start = coordinates[i];
-      final end = coordinates[i + 1];
+    if (coordinates.isEmpty) {
+      return;
+    }
 
-      canvas.drawLine(
-        Offset(start.$1.toDouble(), start.$2.toDouble()),
-        Offset(end.$1.toDouble(), end.$2.toDouble()),
-        paint,
-      );
+    if (coordinates.length == 1) {
+      canvas.drawCircle(Offset(coordinates[0].$1.toDouble(), coordinates[0].$2.toDouble()), 5.0, paint,);
+    } else {
+      for (int i = 0; i < coordinates.length - 1; i++) {
+        final start = coordinates[i];
+        final end = coordinates[i + 1];
+        canvas.drawLine(
+          Offset(start.$1.toDouble(), start.$2.toDouble()),
+          Offset(end.$1.toDouble(), end.$2.toDouble()),
+          paint,
+        );
+      }
     }
   }
 
@@ -693,5 +830,3 @@ class LinesPainter extends CustomPainter {
     return oldDelegate.coordinates != coordinates;
   }
 }
-
-

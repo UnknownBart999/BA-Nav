@@ -60,7 +60,6 @@ Future<(int, String, int, img.Image?, List<(int, int)>)> tripFromTo(
   // If current trip is null -> make new trip
   if (loadedTrip == _defaultTrip) {
     loadedTrip = loadedMap != _defaultMap ? astar(nid1, nid2, loadedMap!) : null;
-    print(loadedTrip);
   }
   return _getSegment(segmentNumber);
 }
