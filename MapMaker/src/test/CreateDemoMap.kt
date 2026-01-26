@@ -74,6 +74,12 @@ fun createDemoMap(): MapData {
     b1.floors[0].addEdge("F0 Hallway 4", "Staircase F0")
     b1.floors[0].addEdge("F0 Hallway 11", "Staircase F0")
     b1.floors[0].addExternalEdge("B1 Exit", outside_floor.nodes.find { it.name == "B1 Entrance" }!!)
+    b1.floors[0].addEdge("F0 Hallway 2", "Room 0")
+    b1.floors[0].addEdge("F0 Hallway 3", "Room 1")
+    b1.floors[0].addEdge("F0 Hallway 6", "Room 2")
+    b1.floors[0].addEdge("F0 Hallway 9", "Room 3.1")
+    b1.floors[0].addEdge("F0 Hallway 10", "Room 3.2")
+    b1.floors[0].addEdge("F0 Hallway 12", "Room 4")
 
     // Add floor 1
     b1.newFloor(1)
