@@ -1,0 +1,12 @@
+{
+  "version": "0.2.1",
+  "defaults": {},
+  "configurations": [
+    {
+      "type": "default",
+      "project": "Viewer\\windows\\CMakeLists.txt",
+      "projectTarget": "ba_nav.exe (Install)",
+      "name": "ba_nav.exe (Install)"
+    }
+  ]
+}

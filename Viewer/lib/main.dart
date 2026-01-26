@@ -56,7 +56,9 @@ class _ENSYCState extends State<ENSYC> {
       context: context,
       builder: (context) => AlertDialog(
         title: const Text('Invalid Map File'),
-        content: const Text('The previously loaded map file is no longer valid. Please select a new one.'),
+        content: const Text(
+          'The previously loaded map file is no longer valid. Please select a new one.',
+        ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
@@ -94,19 +96,32 @@ class _ENSYCState extends State<ENSYC> {
     return MaterialApp(
       title: 'ENSYC',
       theme: ThemeData(
-        colorScheme: ColorScheme.fromSeed(seedColor: const Color.fromARGB(255, 58, 154, 183), brightness: Brightness.dark),
+        colorScheme: ColorScheme.fromSeed(
+          seedColor: const Color.fromARGB(255, 58, 154, 183),
+          brightness: Brightness.dark,
+        ),
       ),
-      home: TripPage(title: 'Trip', mapFilePath: mapFilePath, onOpenMapFile: _openMapFile),
+      home: TripPage(
+        title: 'Trip',
+        mapFilePath: mapFilePath,
+        onOpenMapFile: _openMapFile,
+      ),
       routes: {
-        '/menu': (context) => MenuPage(onOpenMapFile: _openMapFile, mapFilePath: mapFilePath),
+        '/menu': (context) =>
+            MenuPage(onOpenMapFile: _openMapFile, mapFilePath: mapFilePath),
         '/location-select': (context) {
-          final selectedFrom = ModalRoute.of(context)?.settings.arguments as String?;
+          final selectedFrom =
+              ModalRoute.of(context)?.settings.arguments as String?;
           return LocationSelectPage(selectedBuilding: selectedFrom);
         },
         '/navigation': (context) {
-          final args = ModalRoute.of(context)?.settings.arguments as (int, dynamic)?;
+          final args =
+              ModalRoute.of(context)?.settings.arguments as (int, dynamic)?;
           if (args != null) {
-            return NavigationPage(fromLocationId: args.$1, toLocationOrCategory: args.$2);
+            return NavigationPage(
+              fromLocationId: args.$1,
+              toLocationOrCategory: args.$2,
+            );
           }
           return const NavigationPagePlaceholder();
         },
@@ -117,7 +132,12 @@ class _ENSYCState extends State<ENSYC> {
 }
 
 class TripPage extends StatefulWidget {
-  const TripPage({super.key, required this.title, this.mapFilePath, this.onOpenMapFile});
+  const TripPage({
+    super.key,
+    required this.title,
+    this.mapFilePath,
+    this.onOpenMapFile,
+  });
   final String title;
   final String? mapFilePath;
   final Future<void> Function()? onOpenMapFile;
@@ -134,10 +154,10 @@ class _TripPageState extends State<TripPage> {
   String? selectedToBuilding = "";
   String? selectedCategory = "";
   bool isUsingFind = false;
-  List<DropdownMenuItem<String>> dropDownItems=[];
-  List<DropdownMenuItem<String>> categoryItems=[];
+  List<DropdownMenuItem<String>> dropDownItems = [];
+  List<DropdownMenuItem<String>> categoryItems = [];
   String? _previousMapFilePath;
-  
+
   // _TripPageState(){
   //   List<String> building_names=getBuildingNames();
   //   selectedFromBuilding = building_names[0];
@@ -152,15 +172,26 @@ class _TripPageState extends State<TripPage> {
   void initState() {
     super.initState();
     if (widget.mapFilePath != null) {
-      List<String> building_names=getBuildingNames();
+      List<String> building_names = getBuildingNames();
       selectedFromBuilding = building_names[0];
       selectedToBuilding = building_names[0];
       dropDownItems.clear();
       categoryItems.clear();
-      for(int i=0; i<building_names.length; ++i){dropDownItems.add(DropdownMenuItem(value: building_names[i], child: Text(building_names[i])));}
+      for (int i = 0; i < building_names.length; ++i) {
+        dropDownItems.add(
+          DropdownMenuItem(
+            value: building_names[i],
+            child: Text(building_names[i]),
+          ),
+        );
+      }
       List<String> categories = getCategories();
       selectedCategory = categories[0];
-      for(int i=0; i<categories.length; ++i){categoryItems.add(DropdownMenuItem(value: categories[i], child: Text(categories[i])));}
+      for (int i = 0; i < categories.length; ++i) {
+        categoryItems.add(
+          DropdownMenuItem(value: categories[i], child: Text(categories[i])),
+        );
+      }
       setState(() {});
     }
   }
@@ -168,21 +199,33 @@ class _TripPageState extends State<TripPage> {
   @override
   void didUpdateWidget(TripPage oldWidget) {
     super.didUpdateWidget(oldWidget);
-    if (widget.mapFilePath != _previousMapFilePath && widget.mapFilePath != null) {
+    if (widget.mapFilePath != _previousMapFilePath &&
+        widget.mapFilePath != null) {
       _previousMapFilePath = widget.mapFilePath;
       SchedulerBinding.instance.addPostFrameCallback((_) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('Map file loaded successfully')),
         );
-        List<String> building_names=getBuildingNames();
+        List<String> building_names = getBuildingNames();
         selectedFromBuilding = building_names[0];
         selectedToBuilding = building_names[0];
         dropDownItems.clear();
         categoryItems.clear();
-        for(int i=0; i<building_names.length; ++i){dropDownItems.add(DropdownMenuItem(value: building_names[i], child: Text(building_names[i])));}
+        for (int i = 0; i < building_names.length; ++i) {
+          dropDownItems.add(
+            DropdownMenuItem(
+              value: building_names[i],
+              child: Text(building_names[i]),
+            ),
+          );
+        }
         List<String> categories = getCategories();
         selectedCategory = categories[0];
-        for(int i=0; i<categories.length; ++i){categoryItems.add(DropdownMenuItem(value: categories[i], child: Text(categories[i])));}
+        for (int i = 0; i < categories.length; ++i) {
+          categoryItems.add(
+            DropdownMenuItem(value: categories[i], child: Text(categories[i])),
+          );
+        }
         setState(() {});
       });
     }
@@ -197,7 +240,13 @@ class _TripPageState extends State<TripPage> {
             padding: const EdgeInsets.all(16),
             child: Row(
               children: [
-                IconButton(onPressed: (){Navigator.of(context).pushNamed('/menu');}, icon: const Icon(Icons.menu), iconSize: 27,),
+                IconButton(
+                  onPressed: () {
+                    Navigator.of(context).pushNamed('/menu');
+                  },
+                  icon: const Icon(Icons.menu),
+                  iconSize: 27,
+                ),
                 Text("ENSYC"),
               ],
             ),
@@ -225,8 +274,8 @@ class _TripPageState extends State<TripPage> {
                       onChanged: (value) {
                         setState(() {
                           selectedFromBuilding = value;
-                          selectedFromLocation=-1;
-                          selectedFromLocationName="...";
+                          selectedFromLocation = -1;
+                          selectedFromLocationName = "...";
                         });
                       },
                     ),
@@ -236,16 +285,23 @@ class _TripPageState extends State<TripPage> {
                     width: double.infinity,
                     height: 48,
                     child: OutlinedButton(
-                      style: OutlinedButton.styleFrom(shape: RoundedRectangleBorder(borderRadius: BorderRadius.zero),),
+                      style: OutlinedButton.styleFrom(
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.zero,
+                        ),
+                      ),
                       onPressed: () async {
-                          final result = await Navigator.of(context).pushNamed('/location-select', arguments: selectedFromBuilding);
-                          if (result is (int, String, String)) {
-                            setState(() {
-                              selectedFromLocation = result.$1;
-                              selectedFromLocationName = result.$2;
-                            });
-                          }
-                        },
+                        final result = await Navigator.of(context).pushNamed(
+                          '/location-select',
+                          arguments: selectedFromBuilding,
+                        );
+                        if (result is (int, String, String)) {
+                          setState(() {
+                            selectedFromLocation = result.$1;
+                            selectedFromLocationName = result.$2;
+                          });
+                        }
+                      },
                       child: Text(selectedFromLocationName ?? "..."),
                     ),
                   ),
@@ -303,8 +359,8 @@ class _TripPageState extends State<TripPage> {
                         onChanged: (value) {
                           setState(() {
                             selectedToBuilding = value;
-                            selectedToLocation=-1;
-                            selectedToLocationName="...";
+                            selectedToLocation = -1;
+                            selectedToLocationName = "...";
                           });
                         },
                       ),
@@ -314,16 +370,23 @@ class _TripPageState extends State<TripPage> {
                       width: double.infinity,
                       height: 48,
                       child: OutlinedButton(
-                        style: OutlinedButton.styleFrom(shape: RoundedRectangleBorder(borderRadius: BorderRadius.zero),),
+                        style: OutlinedButton.styleFrom(
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.zero,
+                          ),
+                        ),
                         onPressed: () async {
-                            final result = await Navigator.of(context).pushNamed('/location-select', arguments: selectedToBuilding);
-                            if (result is (int, String, String)) {
-                              setState(() {
-                                selectedToLocation = result.$1;
-                                selectedToLocationName = result.$2;
-                              });
-                            }
-                          },
+                          final result = await Navigator.of(context).pushNamed(
+                            '/location-select',
+                            arguments: selectedToBuilding,
+                          );
+                          if (result is (int, String, String)) {
+                            setState(() {
+                              selectedToLocation = result.$1;
+                              selectedToLocationName = result.$2;
+                            });
+                          }
+                        },
                         child: Text(selectedToLocationName ?? "..."),
                       ),
                     ),
@@ -372,17 +435,29 @@ class _TripPageState extends State<TripPage> {
                 style: ElevatedButton.styleFrom(
                   backgroundColor: const Color.fromARGB(255, 58, 154, 183),
                 ),
-                onPressed: (){
+                onPressed: () {
                   if (selectedFromLocation == -1) return;
                   if (isUsingFind) {
-                    Navigator.of(context).pushReplacementNamed('/navigation', arguments: (selectedFromLocation, selectedCategory));
+                    Navigator.of(context).pushReplacementNamed(
+                      '/navigation',
+                      arguments: (selectedFromLocation, selectedCategory),
+                    );
                   } else {
                     if (selectedToLocation == -1) return;
-                    Navigator.of(context).pushReplacementNamed('/navigation', arguments: (selectedFromLocation, selectedToLocation));
+                    Navigator.of(context).pushReplacementNamed(
+                      '/navigation',
+                      arguments: (selectedFromLocation, selectedToLocation),
+                    );
                   }
                 },
-                icon: const Icon(Icons.navigation, color: Color.fromARGB(255, 220, 220, 220)),
-                label: const Text('Go', style: TextStyle(color: Color.fromARGB(255, 220, 220, 220))),
+                icon: const Icon(
+                  Icons.navigation,
+                  color: Color.fromARGB(255, 220, 220, 220),
+                ),
+                label: const Text(
+                  'Go',
+                  style: TextStyle(color: Color.fromARGB(255, 220, 220, 220)),
+                ),
               ),
             ),
           ),
@@ -398,10 +473,14 @@ class _TripPageState extends State<TripPage> {
                 ),
                 IconButton(
                   onPressed: () {
-                  if (selectedFromLocation == -1 || selectedToLocation == -1) {
+                    if (selectedFromLocation == -1 ||
+                        selectedToLocation == -1) {
                       Navigator.of(context).pushReplacementNamed('/navigation');
                     } else {
-                      Navigator.of(context).pushReplacementNamed('/navigation', arguments: (selectedFromLocation, selectedToLocation));
+                      Navigator.of(context).pushReplacementNamed(
+                        '/navigation',
+                        arguments: (selectedFromLocation, selectedToLocation),
+                      );
                     }
                   },
                   icon: const Icon(Icons.navigation),
@@ -449,7 +528,9 @@ class _LocationSelectPageState extends State<LocationSelectPage> {
 
   @override
   Widget build(BuildContext context) {
-    List<(int, String, String)> locations = getLocationsInBuilding(widget.selectedBuilding ?? "");
+    List<(int, String, String)> locations = getLocationsInBuilding(
+      widget.selectedBuilding ?? "",
+    );
 
     return Scaffold(
       body: Column(
@@ -458,7 +539,13 @@ class _LocationSelectPageState extends State<LocationSelectPage> {
             padding: const EdgeInsets.all(16),
             child: Row(
               children: [
-                IconButton(onPressed: (){Navigator.of(context).pop();}, icon: const Icon(Icons.arrow_back), iconSize: 27,),
+                IconButton(
+                  onPressed: () {
+                    Navigator.of(context).pop();
+                  },
+                  icon: const Icon(Icons.arrow_back),
+                  iconSize: 27,
+                ),
                 const SizedBox(width: 56),
               ],
             ),
@@ -469,12 +556,14 @@ class _LocationSelectPageState extends State<LocationSelectPage> {
               children: [
                 Text('Building: ${widget.selectedBuilding}'),
                 const SizedBox(height: 16),
-                ...locations.map((loc) => ListTile(
-                  title: Text("${loc.$2} (${loc.$3})"),
-                  onTap: () {
-                    Navigator.of(context).pop(loc);
-                  },
-                )),
+                ...locations.map(
+                  (loc) => ListTile(
+                    title: Text("${loc.$2} (${loc.$3})"),
+                    onTap: () {
+                      Navigator.of(context).pop(loc);
+                    },
+                  ),
+                ),
               ],
             ),
           ),
@@ -488,7 +577,7 @@ class MenuPage extends StatelessWidget {
   const MenuPage({super.key, this.onOpenMapFile, this.mapFilePath});
   final Future<void> Function()? onOpenMapFile;
   final String? mapFilePath;
-  
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -498,7 +587,13 @@ class MenuPage extends StatelessWidget {
             padding: const EdgeInsets.all(16),
             child: Row(
               children: [
-                IconButton(onPressed: (){Navigator.of(context).pop();}, icon: const Icon(Icons.arrow_back), iconSize: 27,),
+                IconButton(
+                  onPressed: () {
+                    Navigator.of(context).pop();
+                  },
+                  icon: const Icon(Icons.arrow_back),
+                  iconSize: 27,
+                ),
                 const SizedBox(width: 56),
               ],
             ),
@@ -510,7 +605,13 @@ class MenuPage extends StatelessWidget {
                 ListTile(
                   leading: const Icon(Icons.map),
                   title: const Text('Open map file'),
-                  subtitle: mapFilePath != null ? Text(mapFilePath ?? '', maxLines: 1, overflow: TextOverflow.ellipsis) : const Text('No map file loaded'),
+                  subtitle: mapFilePath != null
+                      ? Text(
+                          mapFilePath ?? '',
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        )
+                      : const Text('No map file loaded'),
                   onTap: onOpenMapFile,
                 ),
                 ExpansionTile(
@@ -610,7 +711,10 @@ class NavigationPagePlaceholder extends StatelessWidget {
         children: [
           Expanded(
             child: Center(
-              child: const Text('Please plan a trip first', style: TextStyle(fontSize: 16)),
+              child: const Text(
+                'Please plan a trip first',
+                style: TextStyle(fontSize: 16),
+              ),
             ),
           ),
           Padding(
@@ -650,7 +754,11 @@ class NavigationPage extends StatefulWidget {
   final int fromLocationId;
   final dynamic toLocationOrCategory;
 
-  const NavigationPage({super.key, required this.fromLocationId, required this.toLocationOrCategory});
+  const NavigationPage({
+    super.key,
+    required this.fromLocationId,
+    required this.toLocationOrCategory,
+  });
 
   @override
   State<NavigationPage> createState() => _NavigationPageState();
@@ -678,9 +786,17 @@ class _NavigationPageState extends State<NavigationPage> {
     late dynamic tripData;
     unloadTrip();
     if (widget.toLocationOrCategory is String) {
-      tripData = await tripFromFind(widget.fromLocationId, widget.toLocationOrCategory as String, currentSection);
+      tripData = await tripFromFind(
+        widget.fromLocationId,
+        widget.toLocationOrCategory as String,
+        currentSection,
+      );
     } else {
-      tripData = await tripFromTo(widget.fromLocationId, widget.toLocationOrCategory as int, currentSection);
+      tripData = await tripFromTo(
+        widget.fromLocationId,
+        widget.toLocationOrCategory as int,
+        currentSection,
+      );
     }
     _isLoading = false;
     setState(() {
@@ -723,8 +839,14 @@ class _NavigationPageState extends State<NavigationPage> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text('$buildingName - Floor $floor', style: const TextStyle(fontSize: 12)),
-                Text('${currentSection + 1}/$totalSections', style: const TextStyle(fontSize: 12)),
+                Text(
+                  '$buildingName - Floor $floor',
+                  style: const TextStyle(fontSize: 12),
+                ),
+                Text(
+                  '${currentSection + 1}/$totalSections',
+                  style: const TextStyle(fontSize: 12),
+                ),
                 const SizedBox(height: 8),
               ],
             ),
@@ -811,7 +933,11 @@ class LinesPainter extends CustomPainter {
     }
 
     if (coordinates.length == 1) {
-      canvas.drawCircle(Offset(coordinates[0].$1.toDouble(), coordinates[0].$2.toDouble()), 5.0, paint,);
+      canvas.drawCircle(
+        Offset(coordinates[0].$1.toDouble(), coordinates[0].$2.toDouble()),
+        5.0,
+        paint,
+      );
     } else {
       for (int i = 0; i < coordinates.length - 1; i++) {
         final start = coordinates[i];
